@@ -29,7 +29,7 @@ taf-ems/
 ## Development progress
 
 - [x] Phase 0 — SRS analysis (`docs/01-srs-analysis.md`)
-- [ ] Phase 1 — Development environment setup
+- [x] Phase 1 — Development environment setup
 - [ ] Phase 2 — JavaScript essentials
 - [ ] Phase 3 — Backend setup and architecture
 - [ ] Phase 4 — Database design (ERD, Prisma schema)

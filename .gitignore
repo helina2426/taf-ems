@@ -1,0 +1,26 @@
+# Installed packages (huge, and anyone can reinstall them with "npm install")
+node_modules/
+
+# Secret settings: passwords, keys. NEVER upload these.
+.env
+.env.*
+!.env.example
+
+# Build output (created automatically, not source code)
+dist/
+build/
+
+# Log files
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage reports
+coverage/
+
+# Mac system files
+.DS_Store
+
+# Editor settings that are personal to your computer
+.vscode/*
+!.vscode/extensions.json

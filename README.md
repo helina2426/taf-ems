@@ -31,7 +31,7 @@ taf-ems/
 - [x] Phase 0 — SRS analysis (`docs/01-srs-analysis.md`)
 - [x] Phase 1 — Development environment setup
 - [ ] Phase 2 — JavaScript essentials
-- [ ] Phase 3 — Backend setup and architecture
+- [x] Phase 3 — Backend setup and architecture
 - [ ] Phase 4 — Database design (ERD, Prisma schema)
 - [ ] Phase 5 — Backend modules
 - [ ] Phase 6 — API testing with Postman
@@ -41,6 +41,17 @@ taf-ems/
 - [ ] Phase 10 — Full-stack integration
 - [ ] Phase 11 — Testing and QA
 - [ ] Phase 12 — Deployment readiness
+
+## Running the backend
+
+```bash
+cd backend
+cp .env.example .env    # first time only, then edit .env with your values
+npm install             # first time only, installs the libraries
+npm run dev             # starts the server and restarts it when files change
+```
+
+Check it works: open http://localhost:4000/api/health
 
 ## Local environment
 

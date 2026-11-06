@@ -1,0 +1,358 @@
+// ============================================================================
+// Taf EMS — Database schema
+// Built from docs/03-database-design.md (approved ERD, draft 1).
+// Each "model" below becomes one table in PostgreSQL.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ----------------------------------------------------------------------------
+// ENUMS — fixed lists of allowed values
+// ----------------------------------------------------------------------------
+
+enum Role {
+  HOLDING
+  MANAGER
+  EMPLOYEE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PeriodStatus {
+  UPCOMING
+  OPEN
+  CLOSED
+}
+
+enum SelfAssessmentStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum EvaluationType {
+  EMPLOYEE
+  MANAGER
+}
+
+enum EvaluationStatus {
+  DRAFT
+  SUBMITTED
+  RETURNED
+  APPROVED
+  PUBLISHED
+}
+
+enum ReviewDecision {
+  APPROVED
+  RETURNED
+}
+
+// ----------------------------------------------------------------------------
+// ORGANIZATION
+// ----------------------------------------------------------------------------
+
+model Holding {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companies Company[]
+}
+
+model Company {
+  id        String   @id @default(uuid()) @db.Uuid
+  holdingId String   @db.Uuid
+  name      String   @unique
+  code      String   @unique
+  address   String?
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  holding            Holding             @relation(fields: [holdingId], references: [id])
+  employees          Employee[]
+  managerAssignments ManagerAssignment[]
+  evaluations        Evaluation[]
+
+  @@index([holdingId])
+}
+
+// ----------------------------------------------------------------------------
+// PEOPLE AND LOGINS
+// ----------------------------------------------------------------------------
+
+model User {
+  id                    String    @id @default(uuid()) @db.Uuid
+  email                 String    @unique
+  passwordHash          String
+  role                  Role
+  isPrimaryHoldingUser  Boolean   @default(false)
+  canApproveEvaluations Boolean   @default(false)
+  isActive              Boolean   @default(true)
+  mustChangePassword    Boolean   @default(true)
+  lastLoginAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  employee             Employee?
+  managerAssignments   ManagerAssignment[]  @relation("AssignedManager")
+  assignmentsMade      ManagerAssignment[]  @relation("AssignedBy")
+  goalsCreated         PerformanceGoal[]
+  goalProgressUpdates  GoalProgressUpdate[]
+  periodsCreated       EvaluationPeriod[]
+  evaluationsWritten   Evaluation[]         @relation("Evaluator")
+  evaluationsPublished Evaluation[]         @relation("PublishedBy")
+  reviews              EvaluationReview[]
+  auditLogs            AuditLog[]
+}
+
+model Employee {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @unique @db.Uuid
+  companyId        String           @db.Uuid
+  employeeNumber   String
+  firstName        String
+  lastName         String
+  jobTitle         String?
+  department       String?
+  phone            String?
+  address          String?
+  emergencyContact String?
+  hireDate         DateTime?        @db.Date
+  employmentStatus EmploymentStatus @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id])
+  company         Company           @relation(fields: [companyId], references: [id])
+  goals           PerformanceGoal[]
+  selfAssessments SelfAssessment[]
+  evaluations     Evaluation[]
+
+  @@unique([companyId, employeeNumber])
+  @@index([companyId])
+}
+
+model ManagerAssignment {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @db.Uuid
+  managerUserId String    @db.Uuid
+  assignedById  String    @db.Uuid
+  startDate     DateTime  @default(now())
+  endDate       DateTime? // empty (null) while the assignment is active
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company    Company @relation(fields: [companyId], references: [id])
+  manager    User    @relation("AssignedManager", fields: [managerUserId], references: [id])
+  assignedBy User    @relation("AssignedBy", fields: [assignedById], references: [id])
+
+  @@index([companyId])
+  @@index([managerUserId])
+}
+
+// ----------------------------------------------------------------------------
+// GOALS
+// ----------------------------------------------------------------------------
+
+model PerformanceGoal {
+  id              String     @id @default(uuid()) @db.Uuid
+  employeeId      String     @db.Uuid
+  periodId        String?    @db.Uuid
+  createdById     String     @db.Uuid
+  title           String
+  description     String?
+  objectives      String?
+  kpi             String?
+  targetResult    String?
+  deadline        DateTime?  @db.Date
+  progressPercent Int        @default(0)
+  status          GoalStatus @default(NOT_STARTED)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  employee        Employee             @relation(fields: [employeeId], references: [id])
+  period          EvaluationPeriod?    @relation(fields: [periodId], references: [id])
+  createdBy       User                 @relation(fields: [createdById], references: [id])
+  progressUpdates GoalProgressUpdate[]
+
+  @@index([employeeId])
+  @@index([periodId])
+}
+
+model GoalProgressUpdate {
+  id              String   @id @default(uuid()) @db.Uuid
+  goalId          String   @db.Uuid
+  updatedById     String   @db.Uuid
+  progressPercent Int
+  comment         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  goal      PerformanceGoal @relation(fields: [goalId], references: [id])
+  updatedBy User            @relation(fields: [updatedById], references: [id])
+
+  @@index([goalId])
+}
+
+// ----------------------------------------------------------------------------
+// EVALUATION SETUP
+// ----------------------------------------------------------------------------
+
+model EvaluationPeriod {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @unique
+  startDate   DateTime     @db.Date
+  endDate     DateTime     @db.Date
+  status      PeriodStatus @default(UPCOMING)
+  createdById String       @db.Uuid
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  createdBy       User              @relation(fields: [createdById], references: [id])
+  goals           PerformanceGoal[]
+  selfAssessments SelfAssessment[]
+  evaluations     Evaluation[]
+}
+
+model EvaluationCriterion {
+  id          String         @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  appliesTo   EvaluationType
+  weight      Decimal        @db.Decimal(5, 2) // percent; active weights per list add up to 100
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  scores EvaluationScore[]
+
+  @@index([appliesTo, isActive])
+}
+
+// ----------------------------------------------------------------------------
+// SELF-ASSESSMENT AND EVALUATION
+// ----------------------------------------------------------------------------
+
+model SelfAssessment {
+  id          String               @id @default(uuid()) @db.Uuid
+  employeeId  String               @db.Uuid
+  periodId    String               @db.Uuid
+  comments    String?
+  status      SelfAssessmentStatus @default(DRAFT)
+  submittedAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  employee Employee         @relation(fields: [employeeId], references: [id])
+  period   EvaluationPeriod @relation(fields: [periodId], references: [id])
+
+  @@unique([employeeId, periodId])
+}
+
+model Evaluation {
+  id              String           @id @default(uuid()) @db.Uuid
+  employeeId      String           @db.Uuid // the person being evaluated
+  companyId       String           @db.Uuid // their company at the time of the evaluation
+  periodId        String           @db.Uuid
+  evaluatorId     String           @db.Uuid // the user who fills it in
+  type            EvaluationType
+  status          EvaluationStatus @default(DRAFT)
+  overallScore    Decimal?         @db.Decimal(5, 2) // weighted percent
+  feedback        String?
+  recommendations String?
+  submittedAt     DateTime?
+  publishedAt     DateTime?
+  publishedById   String?          @db.Uuid
+  acknowledgedAt  DateTime?
+  employeeComment String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  employee    Employee           @relation(fields: [employeeId], references: [id])
+  company     Company            @relation(fields: [companyId], references: [id])
+  period      EvaluationPeriod   @relation(fields: [periodId], references: [id])
+  evaluator   User               @relation("Evaluator", fields: [evaluatorId], references: [id])
+  publishedBy User?              @relation("PublishedBy", fields: [publishedById], references: [id])
+  scores      EvaluationScore[]
+  reviews     EvaluationReview[]
+
+  @@unique([employeeId, periodId])
+  @@index([companyId, status])
+  @@index([periodId])
+  @@index([evaluatorId])
+}
+
+model EvaluationScore {
+  id           String   @id @default(uuid()) @db.Uuid
+  evaluationId String   @db.Uuid
+  criterionId  String   @db.Uuid
+  score        Int // 1 to 5
+  weightUsed   Decimal  @db.Decimal(5, 2) // copy of the criterion's weight at that time
+  comment      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  evaluation Evaluation          @relation(fields: [evaluationId], references: [id])
+  criterion  EvaluationCriterion @relation(fields: [criterionId], references: [id])
+
+  @@unique([evaluationId, criterionId])
+}
+
+model EvaluationReview {
+  id           String         @id @default(uuid()) @db.Uuid
+  evaluationId String         @db.Uuid
+  reviewerId   String         @db.Uuid
+  decision     ReviewDecision
+  comment      String?
+  decidedAt    DateTime       @default(now())
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+  reviewer   User       @relation(fields: [reviewerId], references: [id])
+
+  @@index([evaluationId])
+}
+
+// ----------------------------------------------------------------------------
+// AUDIT
+// ----------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid // empty for failed logins
+  action     String
+  entityType String?
+  entityId   String?  @db.Uuid
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

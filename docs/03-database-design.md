@@ -238,7 +238,7 @@ erDiagram
 | One self-assessment per employee per period | unique together: `employeeId` + `periodId` |
 | One evaluation per person per period | unique together: `employeeId` + `periodId` |
 | Each criterion scored once per evaluation | unique together: `evaluationId` + `criterionId` |
-| Only one active Manager per company | special database rule on `ManagerAssignment` (only one row without `endDate` per company) |
+| Only one active Manager per company | enforced by the backend: assigning a new Manager ends the old assignment in the same database transaction |
 | No row can point to something that does not exist | foreign keys |
 | Nothing important is ever deleted | records are **deactivated** (`isActive = false`) instead of deleted |
 

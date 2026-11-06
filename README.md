@@ -57,6 +57,8 @@ npm run db:seed         # adds fake sample data (development only)
 
 Every day:
 
+API tests: import the two files in `backend/postman/` into Postman, then select the "Taf EMS - Local" environment.
+
 ```bash
 npm run dev             # starts the server and restarts it when files change
 npm run db:studio       # optional: view the database in the browser

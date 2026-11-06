@@ -6,6 +6,8 @@ const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT ?? 4000),
   databaseUrl: process.env.DATABASE_URL,
+  jwtSecret: process.env.JWT_SECRET,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '8h',
 };
 
 // Stop immediately with a clear message if a setting is wrong or missing,
@@ -16,6 +18,11 @@ if (Number.isNaN(env.port)) {
 
 if (!env.databaseUrl) {
   throw new Error('DATABASE_URL is missing. Add it to backend/.env (see .env.example).');
+}
+
+// A short or example secret would make login tokens easy to fake.
+if (!env.jwtSecret || env.jwtSecret.length < 32 || env.jwtSecret.startsWith('CHANGE_ME')) {
+  throw new Error('JWT_SECRET in .env must be a long random string (at least 32 characters). See .env.example.');
 }
 
 export default env;

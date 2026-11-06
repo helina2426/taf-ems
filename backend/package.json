@@ -13,7 +13,6 @@
     "db:seed": "node --env-file=.env prisma/seed.js",
     "db:studio": "prisma studio"
   },
-  
   "engines": {
     "node": ">=20"
   },
@@ -22,7 +21,9 @@
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "bcryptjs": "3.0.3",
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "jose": "6.2.15",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "prisma": "7.10.1"

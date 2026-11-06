@@ -1,13 +1,16 @@
 // A custom error type for problems we expect and understand,
 // such as "not found" (404) or "not allowed" (403).
 // It carries an HTTP status code so the error handler knows what to reply.
+// It can also carry a short "code" (like PASSWORD_CHANGE_REQUIRED) that the
+// frontend can check, instead of reading the message text.
 
 export class AppError extends Error {
-  constructor(statusCode, message, details) {
+  constructor(statusCode, message, details, code) {
     super(message);
     this.name = 'AppError';
     this.statusCode = statusCode;
     this.details = details;
+    this.code = code;
   }
 
   // Shortcuts for the most common errors, so other files can write
@@ -20,8 +23,8 @@ export class AppError extends Error {
     return new AppError(401, message);
   }
 
-  static forbidden(message = 'You do not have permission to do this.') {
-    return new AppError(403, message);
+  static forbidden(message = 'You do not have permission to do this.', code) {
+    return new AppError(403, message, undefined, code);
   }
 
   static notFound(message = 'The requested resource was not found.') {

@@ -19,6 +19,7 @@ export function errorHandler(err, req, res, next) {
       success: false,
       error: {
         message: err.message,
+        ...(err.code && { code: err.code }),
         ...(err.details && { details: err.details }),
       },
     });

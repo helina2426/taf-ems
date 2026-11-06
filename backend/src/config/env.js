@@ -5,12 +5,17 @@
 const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT ?? 4000),
+  databaseUrl: process.env.DATABASE_URL,
 };
 
-// Stop immediately with a clear message if a setting is wrong,
+// Stop immediately with a clear message if a setting is wrong or missing,
 // instead of failing later in a confusing way.
 if (Number.isNaN(env.port)) {
   throw new Error('PORT in .env must be a number, for example PORT=4000');
+}
+
+if (!env.databaseUrl) {
+  throw new Error('DATABASE_URL is missing. Add it to backend/.env (see .env.example).');
 }
 
 export default env;

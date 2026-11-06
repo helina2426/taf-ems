@@ -30,9 +30,9 @@ taf-ems/
 
 - [x] Phase 0 — SRS analysis (`docs/01-srs-analysis.md`)
 - [x] Phase 1 — Development environment setup
-- [ ] Phase 2 — JavaScript essentials
+- [x] Phase 2 — JavaScript essentials
 - [x] Phase 3 — Backend setup and architecture
-- [ ] Phase 4 — Database design (ERD, Prisma schema)
+- [x] Phase 4 — Database design (ERD, Prisma schema)
 - [ ] Phase 5 — Backend modules
 - [ ] Phase 6 — API testing with Postman
 - [ ] Phase 7 — Security review
@@ -44,14 +44,27 @@ taf-ems/
 
 ## Running the backend
 
+First-time setup:
+
 ```bash
 cd backend
-cp .env.example .env    # first time only, then edit .env with your values
-npm install             # first time only, installs the libraries
+cp .env.example .env    # then edit .env with your real values
+npm install             # installs the libraries
+npm run db:migrate      # creates the database tables
+npm run db:generate     # creates the Prisma Client used by the code
+npm run db:seed         # adds fake sample data (development only)
+```
+
+Every day:
+
+```bash
 npm run dev             # starts the server and restarts it when files change
+npm run db:studio       # optional: view the database in the browser
 ```
 
 Check it works: open http://localhost:4000/api/health
+
+Database design: `docs/03-database-design.md` and `docs/Taf-EMS-ERD.png`.
 
 ## Local environment
 

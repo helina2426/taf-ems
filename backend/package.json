@@ -7,8 +7,13 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch --env-file=.env src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "node --env-file=.env prisma/seed.js",
+    "db:studio": "prisma studio"
   },
+  
   "engines": {
     "node": ">=20"
   },
@@ -16,6 +21,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "bcryptjs": "3.0.3",
     "express": "^5.3.0"
   },
   "devDependencies": {

@@ -9,7 +9,9 @@ import env from '../src/config/env.js';
 import prisma from '../src/config/prisma.js';
 
 // One shared password for every sample account (development only).
-// Every account must change it at first login (mustChangePassword = true).
+// Sample accounts are ready to use (mustChangePassword = false), EXCEPT hr@demo.local,
+// which keeps the "change your password first" rule so we can test it.
+// Real accounts created through the API always must change their password first.
 const SAMPLE_PASSWORD = 'ChangeMe123!';
 
 async function main() {
@@ -46,6 +48,7 @@ async function main() {
         role: 'HOLDING',
         isPrimaryHoldingUser: true,
         canApproveEvaluations: true,
+        mustChangePassword: false,
       },
     });
 
@@ -57,6 +60,7 @@ async function main() {
         role: 'HOLDING',
         isPrimaryHoldingUser: false,
         canApproveEvaluations: false,
+        mustChangePassword: true, // kept on purpose, to test the first-login rule
       },
     });
 
@@ -84,7 +88,7 @@ async function main() {
     // Helper: create a login account AND its employee profile together.
     async function createPerson({ email, role, company, employeeNumber, firstName, lastName, jobTitle }) {
       const user = await tx.user.create({
-        data: { email, passwordHash, role },
+        data: { email, passwordHash, role, mustChangePassword: false },
       });
 
       const employee = await tx.employee.create({
@@ -196,6 +200,7 @@ async function main() {
 
   console.log('Sample data created.');
   console.log(`All sample accounts use the password: ${SAMPLE_PASSWORD}`);
+  console.log('(hr@demo.local must change it at first login; the others are ready to use.)');
   console.log('Accounts: head@demo.local, hr@demo.local,');
   console.log('          manager.alpha@demo.local, employee1.alpha@demo.local, employee2.alpha@demo.local,');
   console.log('          manager.beta@demo.local,  employee1.beta@demo.local,  employee2.beta@demo.local');

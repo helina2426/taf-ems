@@ -25,6 +25,24 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
+    // Case 3: a database rule was broken (Prisma error codes).
+  if (err.name === 'PrismaClientKnownRequestError') {
+    if (err.code === 'P2002') {
+      // A unique rule was broken, e.g. two companies with the same code.
+      return res.status(409).json({
+        success: false,
+        error: { message: 'This value is already used by another record.' },
+      });
+    }
+    if (err.code === 'P2025') {
+      // The record to update was not found.
+      return res.status(404).json({
+        success: false,
+        error: { message: 'The requested resource was not found.' },
+      });
+    }
+  }
+
   // Case 3: an unexpected error (a bug). Log the full details on the server,
   // but send the user only a general message, so internal details never leak.
   console.error(err);

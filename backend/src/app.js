@@ -5,6 +5,7 @@
 import express from 'express';
 import { notFound } from './middleware/notFound.js';
 import authRoutes from './modules/auth/auth.routes.js';
+import companyRoutes from './modules/companies/company.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -27,6 +28,8 @@ app.get('/api/health', (req, res) => {
 
 // Module routes.
 app.use('/api/auth', authRoutes);
+
+app.use('/api/companies', companyRoutes);
 
 // 3. No route matched → 404. Must come AFTER all routes.
 app.use(notFound);

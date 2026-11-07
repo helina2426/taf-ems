@@ -1331,6 +1331,1077 @@
           }
         }
       ]
+    },
+    {
+      "name": "Managers",
+      "item": [
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List managers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const items = pm.response.json().data.items;",
+                  "const alpha = items.find((m) => m.email === 'manager.alpha@demo.local');",
+                  "pm.test('Manager Alpha runs ALPHA', () => pm.expect(alpha.currentCompany.code).to.eql('ALPHA'));",
+                  "pm.environment.set('alphaManagerId', alpha.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get manager Alpha (with history)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has assignment history', () => pm.expect(pm.response.json().data.manager.assignmentHistory.length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{alphaManagerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{alphaManagerId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create a test company",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Fresh test data on every run, so this folder can be run again and again.",
+                  "const n = Date.now().toString().slice(-6);",
+                  "pm.environment.set('runNo', n);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('testCompanyId', pm.response.json().data.company.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manager Test Co {{runNo}}\",\n  \"code\": \"MGR-{{runNo}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/companies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create manager 1 (assigned to test company)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const result = pm.response.json().data;",
+                  "pm.test('Runs the test company', () => pm.expect(result.manager.currentCompany.id).to.eql(pm.environment.get('testCompanyId')));",
+                  "pm.test('Must change password first', () => pm.expect(result.manager.mustChangePassword).to.eql(true));",
+                  "pm.test('No password in the reply', () => pm.expect(JSON.stringify(result)).to.not.include('passwordHash'));",
+                  "pm.environment.set('manager1Id', result.manager.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"m1.{{runNo}}@demo.local\",\n  \"temporaryPassword\": \"TempPass2026\",\n  \"firstName\": \"Abel\",\n  \"lastName\": \"Kassa\",\n  \"employeeNumber\": \"M1-{{runNo}}\",\n  \"jobTitle\": \"General Manager\",\n  \"phone\": \"+251 91 000 0001\",\n  \"companyId\": \"{{testCompanyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create manager 2 for the same company (replaces manager 1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const result = pm.response.json().data;",
+                  "pm.test('Reports who was replaced', () => pm.expect(result.replacedManagerId).to.eql(pm.environment.get('manager1Id')));",
+                  "pm.environment.set('manager2Id', result.manager.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"m2.{{runNo}}@demo.local\",\n  \"temporaryPassword\": \"TempPass2026\",\n  \"firstName\": \"Liya\",\n  \"lastName\": \"Mekonnen\",\n  \"employeeNumber\": \"M2-{{runNo}}\",\n  \"companyId\": \"{{testCompanyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager 1 is now unassigned",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No current company', () => pm.expect(pm.response.json().data.manager.currentCompany).to.eql(null));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{manager1Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{manager1Id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Company shows manager 2 as current",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Current manager is manager 2', () => pm.expect(pm.response.json().data.company.currentManager.userId).to.eql(pm.environment.get('manager2Id')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{testCompanyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "{{testCompanyId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign manager 1 back (replaces manager 2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Manager 2 was replaced', () => pm.expect(pm.response.json().data.replacedManagerId).to.eql(pm.environment.get('manager2Id')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"{{testCompanyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{manager1Id}}/assignment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{manager1Id}}",
+                "assignment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign manager 1 again (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"{{testCompanyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{manager1Id}}/assignment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{manager1Id}}",
+                "assignment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign Manager Alpha to test company (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"{{testCompanyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{alphaManagerId}}/assignment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{alphaManagerId}}",
+                "assignment"
+              ]
+            },
+            "description": "A Manager runs only one company at a time."
+          }
+        },
+        {
+          "name": "Create manager - duplicate email (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"temporaryPassword\": \"TempPass2026\",\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"employeeNumber\": \"DUP-1\",\n  \"companyId\": \"{{testCompanyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create manager - invalid data (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bad\",\n  \"temporaryPassword\": \"weak\",\n  \"firstName\": \"\",\n  \"companyId\": \"nope\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update manager 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Job title changed', () => pm.expect(pm.response.json().data.manager.employee.jobTitle).to.eql('Country Manager'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobTitle\": \"Country Manager\",\n  \"phone\": \"+251 91 999 9999\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{manager1Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{manager1Id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Deactivate manager 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{manager1Id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{manager1Id}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - manager 1 while inactive (expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"m1.{{runNo}}@demo.local\",\n  \"password\": \"TempPass2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Activate manager 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{manager1Id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{manager1Id}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get manager - not a manager id (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/managers/00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "00000000-0000-4000-8000-000000000000"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - manager 1 (temporary password)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Must change password', () => pm.expect(pm.response.json().data.user.mustChangePassword).to.eql(true));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"m1.{{runNo}}@demo.local\",\n  \"password\": \"TempPass2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager 1 - open own company before password change (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{testCompanyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "{{testCompanyId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - list managers (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - create manager (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"x.{{runNo}}@demo.local\",\n  \"temporaryPassword\": \"TempPass2026\",\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"employeeNumber\": \"X-1\",\n  \"companyId\": \"{{testCompanyId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/managers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unassign manager 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No current company', () => pm.expect(pm.response.json().data.manager.currentCompany).to.eql(null));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{manager1Id}}/assignment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{manager1Id}}",
+                "assignment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unassign again (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{manager1Id}}/assignment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{manager1Id}}",
+                "assignment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Company has no manager now",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('currentManager is null', () => pm.expect(pm.response.json().data.company.currentManager).to.eql(null));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/{{testCompanyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                "{{testCompanyId}}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

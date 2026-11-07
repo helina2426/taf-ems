@@ -28,3 +28,31 @@ export function toSkipTake({ page, pageSize }) {
 export function buildPagination({ page, pageSize }, total) {
   return { page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
 }
+
+
+// A strong password: 8–72 characters, with at least one letter and one number.
+// (bcrypt ignores anything after 72 characters.)
+export const strongPassword = (label = 'Password') =>
+  z
+    .string({ error: `${label} is required.` })
+    .min(8, `${label} must be at least 8 characters.`)
+    .max(72, `${label} must be at most 72 characters.`)
+    .regex(/[A-Za-z]/, `${label} must contain at least one letter.`)
+    .regex(/[0-9]/, `${label} must contain at least one number.`);
+
+// A required email: spaces removed, lowercase, must look like an email.
+export const requiredEmail = z
+  .string({ error: 'Email is required.' })
+  .trim()
+  .toLowerCase()
+  .pipe(z.email('Enter a valid email address.'));
+
+// Optional text: spaces are removed, and an empty value becomes null (= "no value").
+export const optionalText = (max) =>
+  z
+    .string()
+    .trim()
+    .max(max, `Must be at most ${max} characters.`)
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional();

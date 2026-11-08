@@ -11,6 +11,7 @@ import employeeRoutes from './modules/employees/employee.routes.js';
 import periodRoutes from './modules/periods/period.routes.js';
 import criterionRoutes from './modules/criteria/criterion.routes.js';
 import goalRoutes from './modules/goals/goal.routes.js';
+import selfAssessmentRoutes from './modules/self-assessments/selfAssessment.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -45,6 +46,8 @@ app.use('/api/evaluation-periods', periodRoutes);
 app.use('/api/evaluation-criteria', criterionRoutes);
 
 app.use('/api/goals', goalRoutes);
+
+app.use('/api/self-assessments', selfAssessmentRoutes);
 
 // 3. No route matched → 404. Must come AFTER all routes.
 app.use(notFound);

@@ -7,7 +7,8 @@
 //   • Nobody evaluates themselves.
 //
 // Steps handled here:  (create) DRAFT ──score / feedback──▶ DRAFT ──submit──▶ SUBMITTED
-// A RETURNED evaluation (Module 9) can be edited and submitted again, like a DRAFT.
+// A RETURNED evaluation can be edited and submitted again, like a DRAFT.
+// Approving, returning, publishing and acknowledging are in evaluation.review.service.js.
 //
 // Other rules:
 //   • One evaluation per person per period (database unique rule).
@@ -15,7 +16,7 @@
 //   • Only the active criteria of the right list may be scored; every one must be scored
 //     before submitting, and feedback is required.
 //   • Each score keeps a copy of the weight used, so later weight changes never alter old results.
-//   • Visibility: the person evaluated sees their evaluation only once it is PUBLISHED (Module 9).
+//   • Visibility: the person evaluated sees their evaluation only once it is PUBLISHED.
 
 import prisma from '../../config/prisma.js';
 import { AppError } from '../../shared/AppError.js';
@@ -30,7 +31,7 @@ const CAN_BE_EVALUATED = ['ACTIVE', 'ON_LEAVE'];
 
 // ---------- Who may evaluate ----------
 
-function isAuthorizedHoldingEvaluator(user) {
+export function isAuthorizedHoldingEvaluator(user) {
   return user.role === 'HOLDING' && (user.isPrimaryHoldingUser || user.canApproveEvaluations);
 }
 
@@ -48,7 +49,7 @@ function assertCanEvaluate(user, { type, companyId }) {
 
 // ---------- Who may read ----------
 
-async function assertCanRead(user, evaluation) {
+export async function assertCanRead(user, evaluation) {
   if (user.role === 'HOLDING') return;
 
   // The person evaluated: only after publication.
@@ -78,7 +79,7 @@ function readScope(user, myEmployeeId) {
 
 // ---------- Response ----------
 
-async function toResponse(evaluation, user, { withDetails = false } = {}) {
+export async function toResponse(evaluation, user, { withDetails = false } = {}) {
   const scores = evaluation.scores.map((s) => ({
     criterionId: s.criterionId,
     criterion: s.criterion.name,
@@ -127,6 +128,14 @@ async function toResponse(evaluation, user, { withDetails = false } = {}) {
     response.selfAssessment = selfAssessment
       ? { id: selfAssessment.id, comments: selfAssessment.comments, submittedAt: selfAssessment.submittedAt }
       : null;
+    // The review history (approve / return decisions with their comments) is internal:
+    // the evaluator and the Holding see it, the person evaluated does not.
+    response.reviews = evaluation.reviews.map((r) => ({
+      decision: r.decision,
+      comment: r.comment,
+      reviewer: r.reviewer.email,
+      decidedAt: r.decidedAt,
+    }));
   }
   return response;
 }

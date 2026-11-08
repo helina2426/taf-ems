@@ -10,6 +10,7 @@ export const evaluationInclude = {
   evaluator: { select: { email: true } },
   publishedBy: { select: { email: true } },
   scores: { include: { criterion: true }, orderBy: { weightUsed: 'desc' } },
+  reviews: { include: { reviewer: { select: { email: true } } }, orderBy: { decidedAt: 'asc' } },
 };
 
 export async function findMany(where, { skip, take }) {
@@ -73,4 +74,18 @@ export function upsertScore({ evaluationId, criterionId, score, comment, weightU
 
 export function deleteScoresNotIn(evaluationId, criterionIds, db = prisma) {
   return db.evaluationScore.deleteMany({ where: { evaluationId, criterionId: { notIn: criterionIds } } });
+}
+
+// ---------- Review and publication (Module 9) ----------
+
+// Changes the status ONLY IF it is still "fromStatus". Returns how many rows changed (0 or 1).
+// If two reviewers click at the same moment, the second one changes 0 rows and gets an error,
+// instead of both decisions being saved.
+export async function changeStatus(id, fromStatus, data, db = prisma) {
+  const { count } = await db.evaluation.updateMany({ where: { id, status: fromStatus }, data });
+  return count;
+}
+
+export function createReview({ evaluationId, reviewerId, decision, comment }, db = prisma) {
+  return db.evaluationReview.create({ data: { evaluationId, reviewerId, decision, comment: comment ?? null } });
 }

@@ -40,6 +40,27 @@ export const updateEvaluationSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'Send feedback and/or recommendations.' });
 
+// ---------- Review and publication (Module 9) ----------
+
+// Approving: a comment is optional.
+export const approveSchema = z.object({
+  comment: optionalText(2000),
+});
+
+// Returning: the reason is REQUIRED, so the evaluator knows what to fix.
+export const returnSchema = z.object({
+  comment: z
+    .string({ error: 'Write the reason for returning the evaluation.' })
+    .trim()
+    .min(10, 'The reason must be at least 10 characters.')
+    .max(2000, 'The reason must be at most 2000 characters.'),
+});
+
+// Acknowledging: the person evaluated may add one optional comment.
+export const acknowledgeSchema = z.object({
+  comment: optionalText(2000),
+});
+
 export const listEvaluationsQuerySchema = z.object({
   ...paginationFields,
   periodId: z.uuid('periodId must be a valid id.').optional(),

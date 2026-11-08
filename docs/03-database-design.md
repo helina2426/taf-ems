@@ -301,3 +301,7 @@ DRAFT ──submit──▶ SUBMITTED ──approve──▶ APPROVED ──publ
 | 15 | Nothing important is deleted; records are deactivated instead. | Assumed |
 | 16 | Role is stored as one field on User instead of separate Role and UserRole tables. | Design choice |
 | 17 | Publication is stored as fields on Evaluation instead of a separate table. | Design choice |
+| 18 | Nobody approves an evaluation they submitted, except the primary Holding user. | Assumed |
+| 19 | An evaluation can be returned only while its period is open; approving and publishing are allowed after it closes. | Assumed |
+| 20 | Reports count only final results (approved or published) in averages and completion rates. | Assumed |
+| 21 | Manager performance = share of their team's evaluations submitted, share submitted on time, times returned, and the team's average score. | Assumed |

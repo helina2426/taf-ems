@@ -14,6 +14,8 @@ import goalRoutes from './modules/goals/goal.routes.js';
 import selfAssessmentRoutes from './modules/self-assessments/selfAssessment.routes.js';
 import evaluationRoutes from './modules/evaluations/evaluation.routes.js';
 import holdingUserRoutes from './modules/holding-users/holdingUser.routes.js';
+import reportRoutes from './modules/reports/report.routes.js';
+import auditLogRoutes from './modules/audit-logs/auditLog.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -54,6 +56,10 @@ app.use('/api/self-assessments', selfAssessmentRoutes);
 app.use('/api/evaluations', evaluationRoutes);
 
 app.use('/api/holding-users', holdingUserRoutes);
+
+app.use('/api/reports', reportRoutes);
+
+app.use('/api/audit-logs', auditLogRoutes);
 
 // 3. No route matched → 404. Must come AFTER all routes.
 app.use(notFound);

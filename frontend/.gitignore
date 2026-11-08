@@ -1,0 +1,9 @@
+# Installed packages (recreated with "npm install")
+node_modules/
+
+# The production build (recreated with "npm run build")
+dist/
+
+# Local settings
+.env
+.env.local

@@ -3,7 +3,7 @@
 // If it is valid, it puts the user's details in req.user for the next steps.
 
 import { AppError } from '../shared/AppError.js';
-import { verifyToken } from '../shared/token.js';
+import { passwordStamp, verifyToken } from '../shared/token.js';
 import { findUserForAuth, toAuthUser } from '../modules/auth/auth.repository.js';
 
 // Usage:
@@ -35,6 +35,11 @@ export function authenticate({ allowPasswordChangeRequired = false } = {}) {
 
     if (!authUser || !authUser.isActive) {
       return next(AppError.unauthorized('Your account is not active. Please contact your administrator.'));
+    }
+
+    // 3b. Tokens made before the last password change no longer work (Phase 7).
+    if (payload.pwd !== passwordStamp(user.passwordHash)) {
+      return next(AppError.unauthorized('Your password was changed. Please log in again.'));
     }
 
     // 4. Until the first password change, only a few routes are allowed.

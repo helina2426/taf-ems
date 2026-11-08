@@ -54,7 +54,7 @@ export async function login({ email, password }, requestInfo) {
     details: requestInfo,
   });
 
-  const token = await createToken(authUser);
+  const token = await createToken(authUser, user.passwordHash);
 
   return {
     token,
@@ -82,6 +82,11 @@ export async function changePassword(authUser, { currentPassword, newPassword })
     entityType: 'User',
     entityId: user.id,
   });
+
+  // Old tokens stop working after a password change (see token.js), so the user
+  // gets a fresh token here and stays logged in on this device.
+  const token = await createToken(user, newHash);
+  return { token, expiresIn: env.jwtExpiresIn };
 }
 
 export async function logout(authUser, requestInfo) {

@@ -13,6 +13,14 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
+  // Case 1b: the request body is bigger than allowed (see express.json in app.js).
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      success: false,
+      error: { message: 'The request is too large.' },
+    });
+  }
+
   // Case 2: an error we created on purpose (AppError) — safe to show its message.
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
@@ -25,7 +33,7 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
-    // Case 3: a database rule was broken (Prisma error codes).
+  // Case 3: a database rule was broken (Prisma error codes).
   if (err.name === 'PrismaClientKnownRequestError') {
     if (err.code === 'P2002') {
       // A unique rule was broken, e.g. two companies with the same code.
@@ -43,7 +51,7 @@ export function errorHandler(err, req, res, next) {
     }
   }
 
-  // Case 3: an unexpected error (a bug). Log the full details on the server,
+  // Case 4: an unexpected error (a bug). Log the full details on the server,
   // but send the user only a general message, so internal details never leak.
   console.error(err);
 

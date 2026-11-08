@@ -7593,6 +7593,1563 @@
           }
         }
       ]
+    },
+    {
+      "name": "Evaluations",
+      "item": [
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - create a test period",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('runNo', Date.now().toString().slice(-6));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('evalPeriodId', pm.response.json().data.period.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Evaluation Test {{runNo}}\",\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - open the test period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{evalPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{evalPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - remember the criteria ids",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().data.items;",
+                  "const id = (list, name) => items.find((c) => c.appliesTo === list && c.name === name).id;",
+                  "pm.environment.set('cQuality', id('EMPLOYEE', 'Quality of work'));",
+                  "pm.environment.set('cProductivity', id('EMPLOYEE', 'Productivity'));",
+                  "pm.environment.set('cTeamwork', id('EMPLOYEE', 'Teamwork'));",
+                  "pm.environment.set('cCommunication', id('EMPLOYEE', 'Communication'));",
+                  "pm.environment.set('mLeadership', id('MANAGER', 'Leadership'));",
+                  "pm.environment.set('mResults', id('MANAGER', 'Team results'));",
+                  "pm.environment.set('mPlanning', id('MANAGER', 'Planning and organization'));",
+                  "pm.environment.set('mCommunication', id('MANAGER', 'Communication with the Holding'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?isActive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - remember Manager Alpha's employee id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('alphaManagerEmployeeId', pm.response.json().data.manager.employee.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/managers/{{alphaManagerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "managers",
+                "{{alphaManagerId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - evaluate an employee (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employee1AlphaId}}\",\n  \"periodId\": \"{{evalPeriodId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            },
+            "description": "Employees are evaluated by their own company's Manager."
+          }
+        },
+        {
+          "name": "Login - Manager Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - start an evaluation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.test('DRAFT, type EMPLOYEE, no score yet', () => { pm.expect(e.status).to.eql('DRAFT'); pm.expect(e.type).to.eql('EMPLOYEE'); pm.expect(e.overallScore).to.eql(null); });",
+                  "pm.test('Shows 4 missing criteria', () => pm.expect(e.missingCriteria.length).to.eql(4));",
+                  "pm.environment.set('evalId', e.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employee1AlphaId}}\",\n  \"periodId\": \"{{evalPeriodId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - start a second one for the same person (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employee1AlphaId}}\",\n  \"periodId\": \"{{evalPeriodId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - evaluate a Beta employee (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{newEmployeeId}}\",\n  \"periodId\": \"{{evalPeriodId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - evaluate himself (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{alphaManagerEmployeeId}}\",\n  \"periodId\": \"{{evalPeriodId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - submit with no scores (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - score two criteria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.test('No overall score while incomplete', () => pm.expect(e.overallScore).to.eql(null));",
+                  "pm.test('Two criteria still missing', () => pm.expect(e.missingCriteria.length).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scores\": [\n    {\n      \"criterionId\": \"{{cQuality}}\",\n      \"score\": 4,\n      \"comment\": \"Careful, accurate work.\"\n    },\n    {\n      \"criterionId\": \"{{cProductivity}}\",\n      \"score\": 5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}",
+                "scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - score out of range (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scores\": [\n    {\n      \"criterionId\": \"{{cTeamwork}}\",\n      \"score\": 6\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}",
+                "scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - use a manager criterion (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scores\": [\n    {\n      \"criterionId\": \"{{mLeadership}}\",\n      \"score\": 4\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}",
+                "scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - score the rest (overall becomes 81%)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.test('4×30 + 5×25 + 3×20 + 4×25 ÷ 5 = 81%', () => pm.expect(e.overallScore).to.eql(81));",
+                  "pm.test('Nothing missing', () => pm.expect(e.missingCriteria.length).to.eql(0));",
+                  "pm.test('Weights were copied', () => pm.expect(e.scores.find((s) => s.criterion === 'Quality of work').weightUsed).to.eql(30));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scores\": [\n    {\n      \"criterionId\": \"{{cTeamwork}}\",\n      \"score\": 3\n    },\n    {\n      \"criterionId\": \"{{cCommunication}}\",\n      \"score\": 4\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}",
+                "scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - submit without feedback (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - write feedback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feedback\": \"Dawit delivered the fuel audit early and fixed the leaks himself. Reporting could be more regular.\",\n  \"recommendations\": \"Lead the next safety training; send a short weekly report.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - submit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.test('SUBMITTED with 81%', () => { pm.expect(e.status).to.eql('SUBMITTED'); pm.expect(e.overallScore).to.eql(81); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - change scores after submitting (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scores\": [\n    {\n      \"criterionId\": \"{{cQuality}}\",\n      \"score\": 5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}",
+                "scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - list own company evaluations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Includes the new evaluation', () => pm.expect(pm.response.json().data.items.map((e) => e.id)).to.include(pm.environment.get('evalId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations?periodId={{evalPeriodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ],
+              "query": [
+                {
+                  "key": "periodId",
+                  "value": "{{evalPeriodId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - open own evaluation before publication (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - list hides unpublished evaluations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Not visible yet', () => pm.expect(pm.response.json().data.items.length).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations?periodId={{evalPeriodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ],
+              "query": [
+                {
+                  "key": "periodId",
+                  "value": "{{evalPeriodId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - start an evaluation (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{employee1AlphaId}}\",\n  \"periodId\": \"{{evalPeriodId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Beta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.beta@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager Beta - open Alpha evaluation (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - read the submitted evaluation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Shows the scores', () => pm.expect(pm.response.json().data.evaluation.scores.length).to.eql(4));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{evalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{evalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - evaluate Manager Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Type MANAGER', () => pm.expect(pm.response.json().data.evaluation.type).to.eql('MANAGER'));",
+                  "pm.environment.set('managerEvalId', pm.response.json().data.evaluation.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{alphaManagerEmployeeId}}\",\n  \"periodId\": \"{{evalPeriodId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - use an employee criterion (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scores\": [\n    {\n      \"criterionId\": \"{{cQuality}}\",\n      \"score\": 4\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{managerEvalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{managerEvalId}}",
+                "scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - score the Manager",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('5×30 + 4×30 + 4×20 + 3×20 ÷ 5 = 82%', () => pm.expect(pm.response.json().data.evaluation.overallScore).to.eql(82));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scores\": [\n    {\n      \"criterionId\": \"{{mLeadership}}\",\n      \"score\": 5\n    },\n    {\n      \"criterionId\": \"{{mResults}}\",\n      \"score\": 4\n    },\n    {\n      \"criterionId\": \"{{mPlanning}}\",\n      \"score\": 4\n    },\n    {\n      \"criterionId\": \"{{mCommunication}}\",\n      \"score\": 3\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{managerEvalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{managerEvalId}}",
+                "scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - write feedback and submit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feedback\": \"Strong safety leadership this year; communication with the Holding can be faster.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{managerEvalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{managerEvalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - submit the Manager evaluation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{managerEvalId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{managerEvalId}}",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - open own evaluation before publication (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{managerEvalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{managerEvalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Holding - close the test period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{evalPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{evalPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

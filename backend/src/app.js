@@ -7,6 +7,7 @@ import { notFound } from './middleware/notFound.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import companyRoutes from './modules/companies/company.routes.js';
 import managerRoutes from './modules/managers/manager.routes.js';
+import employeeRoutes from './modules/employees/employee.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -33,6 +34,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
 
 app.use('/api/managers', managerRoutes);
+
+app.use('/api/employees', employeeRoutes);
 
 // 3. No route matched → 404. Must come AFTER all routes.
 app.use(notFound);

@@ -3770,6 +3770,1163 @@
           }
         }
       ]
+    },
+    {
+      "name": "Evaluation setup",
+      "item": [
+        {
+          "name": "Login - Employee Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - list periods",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const annual = pm.response.json().data.items.find((p) => p.name === '2026 Annual Evaluation');",
+                  "pm.test('2026 period is open', () => pm.expect(annual.status).to.eql('OPEN'));",
+                  "pm.environment.set('annualPeriodId', annual.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - list criteria (with totals)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const totals = pm.response.json().data.totals;",
+                  "pm.test('Both lists add up to 100%', () => { pm.expect(totals.EMPLOYEE.activeWeightTotal).to.eql(100); pm.expect(totals.MANAGER.activeWeightTotal).to.eql(100); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?isActive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - create period (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Not allowed\",\n  \"startDate\": \"2027-01-01\",\n  \"endDate\": \"2027-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - create criterion (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Not allowed\",\n  \"appliesTo\": \"EMPLOYEE\",\n  \"weight\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create period",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('runNo', Date.now().toString().slice(-6));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const period = pm.response.json().data.period;",
+                  "pm.test('Starts as UPCOMING', () => pm.expect(period.status).to.eql('UPCOMING'));",
+                  "pm.environment.set('testPeriodId', period.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Period {{runNo}}\",\n  \"startDate\": \"2027-01-01\",\n  \"endDate\": \"2027-06-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create period - end before start (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bad Dates {{runNo}}\",\n  \"startDate\": \"2027-06-30\",\n  \"endDate\": \"2027-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create period - duplicate name (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2026 Annual Evaluation\",\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update period dates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('End date changed', () => pm.expect(pm.response.json().data.period.endDate).to.eql('2027-07-31'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2027-07-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{testPeriodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{testPeriodId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update period - end before saved start (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endDate\": \"2026-12-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{testPeriodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{testPeriodId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Close an UPCOMING period (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{testPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{testPeriodId}}",
+                "status"
+              ]
+            },
+            "description": "A period must be opened before it can be closed."
+          }
+        },
+        {
+          "name": "Create criterion while a period is open (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Initiative {{runNo}}\",\n  \"appliesTo\": \"EMPLOYEE\",\n  \"weight\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ]
+            },
+            "description": "Criteria are locked while any period is open."
+          }
+        },
+        {
+          "name": "Close the 2026 period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{annualPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{annualPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create criterion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('testCriterionId', pm.response.json().data.criterion.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Initiative {{runNo}}\",\n  \"description\": \"Takes action without being asked.\",\n  \"appliesTo\": \"EMPLOYEE\",\n  \"weight\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Totals now show 110% for employees",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const t = pm.response.json().data.totals.EMPLOYEE;",
+                  "pm.test('110% and not complete', () => { pm.expect(t.activeWeightTotal).to.eql(110); pm.expect(t.isComplete).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?appliesTo=EMPLOYEE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "appliesTo",
+                  "value": "EMPLOYEE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create criterion - duplicate active name (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"teamwork\",\n  \"appliesTo\": \"EMPLOYEE\",\n  \"weight\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create criterion - invalid weight (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bad weight\",\n  \"appliesTo\": \"EMPLOYEE\",\n  \"weight\": 12.345\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Open a period while totals are wrong (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{testPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{testPeriodId}}",
+                "status"
+              ]
+            },
+            "description": "A period can only be opened when both criteria lists add up to exactly 100%."
+          }
+        },
+        {
+          "name": "Update criterion weight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Weight is 5', () => pm.expect(pm.response.json().data.criterion.weight).to.eql(5));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/{{testCriterionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "{{testCriterionId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Deactivate criterion (totals back to 100%)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/{{testCriterionId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "{{testCriterionId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reopen the 2026 period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Open again', () => pm.expect(pm.response.json().data.period.status).to.eql('OPEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{annualPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{annualPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Open the test period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{testPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{testPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Close the test period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{testPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{testPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change a closed period (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Renamed {{runNo}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{testPeriodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{testPeriodId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change criterion while a period is open (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/{{testCriterionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "{{testCriterionId}}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

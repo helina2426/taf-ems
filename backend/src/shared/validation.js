@@ -56,3 +56,15 @@ export const optionalText = (max) =>
     .transform((value) => (value === '' ? null : value))
     .nullable()
     .optional();
+
+
+// A required date like 2026-01-31. It becomes a JavaScript Date.
+export const requiredDate = (label = 'Date') =>
+  z.iso
+    .date(`${label} must use the format YYYY-MM-DD, for example 2026-01-31.`)
+    .transform((value) => new Date(value));
+
+// Dates are sent back as "YYYY-MM-DD" (no time), which is easier to read.
+export function toDateOnly(date) {
+  return date ? date.toISOString().slice(0, 10) : null;
+}    

@@ -159,7 +159,7 @@ function CreateManager({ onClose, onSaved }) {
           });
         }}
       >
-        <ErrorAlert error={error} />
+        <ErrorAlert error={error} inForm />
         <Field label="First name *" error={fieldError(error, 'firstName')}>
           <input value={v.firstName} onChange={set('firstName')} autoFocus />
         </Field>
@@ -212,7 +212,7 @@ function EditManager({ manager, onClose, onSaved }) {
           });
         }}
       >
-        <ErrorAlert error={error} />
+        <ErrorAlert error={error} inForm />
         <Field label="First name" error={fieldError(error, 'firstName')}>
           <input value={v.firstName} onChange={set('firstName')} />
         </Field>
@@ -253,7 +253,7 @@ function AssignManager({ manager, onClose, onSaved }) {
           });
         }}
       >
-        <ErrorAlert error={error} />
+        <ErrorAlert error={error} inForm />
         <CompanySelect value={companyId} onChange={(e) => setCompanyId(e.target.value)} error={fieldError(error, 'companyId')} />
       </form>
     </FormModal>

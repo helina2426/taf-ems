@@ -3,6 +3,7 @@
 //   • Manager: "My team" — only their own company (the backend enforces this, whatever the browser sends).
 
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { api } from '../../api/client.js';
 import { useAuth } from '../../auth/useAuth.js';
 import { ConfirmDialog, FormModal } from '../../components/Modal.jsx';
@@ -96,6 +97,9 @@ export function EmployeesPage() {
                     {emp.mustChangePassword && <Badge tone="info">First login pending</Badge>}
                   </td>
                   <td className="row-actions">
+                    <Link className="btn btn-ghost btn-small" to={`/reports/employees/${emp.id}`}>
+                      Report
+                    </Link>
                     <button className="btn btn-ghost btn-small" onClick={() => setDialog({ type: 'edit', employee: emp })}>
                       Edit
                     </button>
@@ -151,7 +155,7 @@ function EmployeeForm({ employee, isHolding, companies = [], onClose, onSaved })
     <FormModal title={isNew ? 'New employee' : `Edit ${fullName(employee)}`} formId="employee-form" busy={busy} onClose={onClose} submitLabel={isNew ? 'Create' : 'Save'} wide>
       <form id="employee-form" className="form-grid form-grid-2" onSubmit={save} noValidate>
         <div className="span-2">
-          <ErrorAlert error={error} />
+          <ErrorAlert error={error} inForm />
         </div>
         <Field label="First name *" error={err('firstName')}>
           <input value={v.firstName} onChange={set('firstName')} autoFocus />
@@ -222,7 +226,7 @@ function StatusForm({ employee, onClose, onSaved }) {
           });
         }}
       >
-        <ErrorAlert error={error} />
+        <ErrorAlert error={error} inForm />
         <Field label="Employment status" hint="Suspended and terminated employees cannot log in. Nothing is deleted.">
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
             {EMPLOYMENT_STATUSES.map((s) => (
@@ -255,7 +259,7 @@ function TransferForm({ employee, companies, onClose, onSaved }) {
         })
       }
     >
-      <ErrorAlert error={error} />
+      <ErrorAlert error={error} inForm />
       <Field label="New company" error={fieldError(error, 'companyId')}>
         <select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
           <option value="">— Choose —</option>

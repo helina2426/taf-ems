@@ -137,7 +137,7 @@ function CompanyForm({ company, onClose, onSaved }) {
       }
     >
       <form id="company-form" className="form-grid" onSubmit={save} noValidate>
-        <ErrorAlert error={error} />
+        <ErrorAlert error={error} inForm />
         <Field label="Name *" error={fieldError(error, 'name')}>
           <input value={values.name} onChange={set('name')} autoFocus />
         </Field>

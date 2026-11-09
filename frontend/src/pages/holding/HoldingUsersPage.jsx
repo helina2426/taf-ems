@@ -108,7 +108,7 @@ function CreateHoldingUser({ onClose, onSaved }) {
           });
         }}
       >
-        <ErrorAlert error={error} />
+        <ErrorAlert error={error} inForm />
         <Field label="Email *" error={fieldError(error, 'email')}>
           <input type="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} autoFocus />
         </Field>

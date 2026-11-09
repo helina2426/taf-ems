@@ -20,15 +20,18 @@ export function Alert({ type = 'info', children }) {
   );
 }
 
-// Shows an ApiError: its message, plus the field-by-field details when there are any.
-export function ErrorAlert({ error }) {
+// Shows an ApiError: its message, plus the field-by-field details.
+// In a form (inForm), messages that belong to a field are already shown under that field,
+// so only the general ones (with no field) are listed here — nothing appears twice.
+export function ErrorAlert({ error, inForm = false }) {
   if (!error) return null;
+  const details = (error.details ?? []).filter((d) => !inForm || !d.field);
   return (
     <Alert type="error">
       {error.message}
-      {error.details?.length > 0 && (
+      {details.length > 0 && (
         <ul className="alert-details">
-          {error.details.map((d, i) => (
+          {details.map((d, i) => (
             <li key={i}>{d.message}</li>
           ))}
         </ul>

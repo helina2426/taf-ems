@@ -8,7 +8,7 @@
 
 import { Navigate, useLocation } from 'react-router';
 import { Spinner } from '../components/ui.jsx';
-import { useAuth } from './AuthContext.jsx';
+import { useAuth } from './useAuth.js';
 
 export function RequireAuth({ roles, children }) {
   const { user, checking } = useAuth();

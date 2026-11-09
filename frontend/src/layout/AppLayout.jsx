@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router';
-import { useAuth } from '../auth/AuthContext.jsx';
+import { useAuth } from '../auth/useAuth.js';
 import { NAVIGATION, ROLE_LABELS } from './navigation.js';
 
 export function AppLayout() {

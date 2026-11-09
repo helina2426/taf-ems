@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { useAuth } from '../auth/AuthContext.jsx';
-import { Alert, ErrorAlert, Field, fieldError } from '../components/ui.jsx';
+import { useAuth } from '../auth/useAuth.js';
+import { Alert, ErrorAlert, Field } from '../components/ui.jsx';
+import { fieldError } from '../utils/format.js';
 
 export function ChangePasswordPage() {
   const { user, changePassword, logout } = useAuth();

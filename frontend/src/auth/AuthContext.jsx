@@ -1,12 +1,11 @@
 // Keeps track of WHO is logged in, for the whole app.
 //
 // "Context" is React's way to share a value with every page without passing it down by hand.
-// Any page can call useAuth() to get: user, login(), logout(), changePassword(), refreshUser().
+// Pages read it with useAuth() (in useAuth.js).
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, setUnauthorizedHandler, tokenStore } from '../api/client.js';
-
-const AuthContext = createContext(null);
+import { AuthContext } from './authContextObject.js';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -74,10 +73,4 @@ export function AuthProvider({ children }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used inside <AuthProvider>.');
-  return context;
 }

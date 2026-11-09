@@ -17,7 +17,11 @@ export function useApi(path, query) {
   const queryKey = JSON.stringify(query ?? {});
 
   useEffect(() => {
-    if (!path) return undefined;
+    // No path = nothing to load (for example, a list only some roles may see).
+    if (!path) {
+      setLoading(false);
+      return undefined;
+    }
     let cancelled = false; // ignore the answer if the page changed in the meantime
     setLoading(true);
     setError(null);

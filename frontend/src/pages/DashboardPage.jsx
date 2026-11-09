@@ -1,10 +1,10 @@
 // The dashboard: one summary per role, from GET /api/reports/dashboard.
 
-import { useAuth } from '../auth/AuthContext.jsx';
+import { useAuth } from '../auth/useAuth.js';
 import { ErrorAlert, PageHeader, Spinner, StatCard } from '../components/ui.jsx';
 import { useApi } from '../hooks/useApi.js';
+import { percent } from '../utils/format.js';
 
-const percent = (value) => (value === null || value === undefined ? '—' : `${value}%`);
 
 export function DashboardPage() {
   const { user } = useAuth();

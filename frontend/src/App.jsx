@@ -9,16 +9,28 @@ import { ChangePasswordPage } from './pages/ChangePasswordPage.jsx';
 import { DashboardPage } from './pages/DashboardPage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { ComingSoonPage, NotFoundPage } from './pages/SimplePages.jsx';
+import { CompaniesPage } from './pages/holding/CompaniesPage.jsx';
+import { HoldingUsersPage } from './pages/holding/HoldingUsersPage.jsx';
+import { ManagersPage } from './pages/holding/ManagersPage.jsx';
+import { EmployeesPage } from './pages/shared/EmployeesPage.jsx';
 
-// Every menu entry except the dashboard is a placeholder for now (built in 8.4–8.6).
-// For each page, we also work out which roles have it in their menu, so the others get "Not available".
-const placeholderPages = [];
+// The pages that are finished. Every other menu entry still shows "built in the next step".
+const PAGES = {
+  '/companies': CompaniesPage,
+  '/managers': ManagersPage,
+  '/employees': EmployeesPage,
+  '/holding-users': HoldingUsersPage,
+};
+
+// For each menu entry (except the dashboard), work out which roles have it in their menu,
+// so that the other roles get "Not available".
+const menuPages = [];
 for (const [role, items] of Object.entries(NAVIGATION)) {
   for (const item of items) {
     if (item.to === '/dashboard') continue;
-    const existing = placeholderPages.find((page) => page.to === item.to);
+    const existing = menuPages.find((page) => page.to === item.to);
     if (existing) existing.roles.push(role);
-    else placeholderPages.push({ ...item, roles: [role] });
+    else menuPages.push({ ...item, roles: [role] });
   }
 }
 
@@ -46,17 +58,16 @@ export default function App() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
-            {placeholderPages.map((item) => (
-              <Route
-                key={item.to}
-                path={item.to}
-                element={
-                  <RequireAuth roles={item.roles}>
-                    <ComingSoonPage title={item.label} />
-                  </RequireAuth>
-                }
-              />
-            ))}
+            {menuPages.map((item) => {
+              const Page = PAGES[item.to];
+              return (
+                <Route
+                  key={item.to}
+                  path={item.to}
+                  element={<RequireAuth roles={item.roles}>{Page ? <Page /> : <ComingSoonPage title={item.label} />}</RequireAuth>}
+                />
+              );
+            })}
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

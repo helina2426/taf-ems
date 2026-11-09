@@ -62,6 +62,16 @@ export function StatCard({ label, value, hint, tone = 'default' }) {
   );
 }
 
+// A small coloured label, e.g. a status. tone: 'neutral' | 'good' | 'warn' | 'bad' | 'info'
+export function Badge({ tone = 'neutral', children }) {
+  return <span className={`badge badge-${tone}`}>{children}</span>;
+}
+
+// Shown when a list has no rows.
+export function EmptyState({ children }) {
+  return <div className="empty-state">{children}</div>;
+}
+
 // A label + input pair for forms. Shows the field's error under it.
 export function Field({ label, error, children, hint }) {
   return (
@@ -72,9 +82,4 @@ export function Field({ label, error, children, hint }) {
       {error && <span className="field-error">{error}</span>}
     </label>
   );
-}
-
-// Finds the message for one field in an ApiError's details.
-export function fieldError(error, field) {
-  return error?.details?.find((d) => d.field === field)?.message;
 }

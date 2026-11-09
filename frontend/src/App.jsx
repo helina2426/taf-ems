@@ -1,36 +1,68 @@
-// A first page that checks the frontend can talk to the backend.
-// It will be replaced by the real pages (login, dashboards) in the next steps.
+// The list of pages (routes) and who may see them.
 
-import { useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { AuthProvider } from './auth/AuthContext.jsx';
+import { RequireAuth } from './auth/RequireAuth.jsx';
+import { AppLayout } from './layout/AppLayout.jsx';
+import { NAVIGATION } from './layout/navigation.js';
+import { ChangePasswordPage } from './pages/ChangePasswordPage.jsx';
+import { DashboardPage } from './pages/DashboardPage.jsx';
+import { LoginPage } from './pages/LoginPage.jsx';
+import { ComingSoonPage, NotFoundPage } from './pages/SimplePages.jsx';
+
+// Every menu entry except the dashboard is a placeholder for now (built in 8.4–8.6).
+// For each page, we also work out which roles have it in their menu, so the others get "Not available".
+const placeholderPages = [];
+for (const [role, items] of Object.entries(NAVIGATION)) {
+  for (const item of items) {
+    if (item.to === '/dashboard') continue;
+    const existing = placeholderPages.find((page) => page.to === item.to);
+    if (existing) existing.roles.push(role);
+    else placeholderPages.push({ ...item, roles: [role] });
+  }
+}
 
 export default function App() {
-  // "state": values that, when they change, make React draw the page again.
-  const [status, setStatus] = useState('checking'); // 'checking' | 'ok' | 'error'
-  const [message, setMessage] = useState('');
-
-  // "effect": code that runs after the page is shown — here, once, to call the backend.
-  useEffect(() => {
-    fetch('/api/health')
-      .then((response) => response.json())
-      .then((body) => {
-        setStatus('ok');
-        setMessage(body.data.message);
-      })
-      .catch(() => {
-        setStatus('error');
-        setMessage('Cannot reach the backend. Is it running on port 4000?');
-      });
-  }, []); // [] = run only once, when the page first appears
-
   return (
-    <main className="center-page">
-      <div className="card">
-        <h1>Taf EMS</h1>
-        <p className="muted">Employee Management and Performance Evaluation</p>
-        <p className={`status status-${status}`}>
-          {status === 'checking' ? 'Checking the backend…' : message}
-        </p>
-      </div>
-    </main>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/change-password"
+            element={
+              <RequireAuth>
+                <ChangePasswordPage />
+              </RequireAuth>
+            }
+          />
+
+          {/* Every page inside the app frame needs a logged-in user. */}
+          <Route
+            element={
+              <RequireAuth>
+                <AppLayout />
+              </RequireAuth>
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            {placeholderPages.map((item) => (
+              <Route
+                key={item.to}
+                path={item.to}
+                element={
+                  <RequireAuth roles={item.roles}>
+                    <ComingSoonPage title={item.label} />
+                  </RequireAuth>
+                }
+              />
+            ))}
+          </Route>
+
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

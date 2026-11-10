@@ -20,9 +20,15 @@ import { EvaluationsPage } from './pages/evaluations/EvaluationsPage.jsx';
 import { MyEvaluationsPage } from './pages/evaluations/MyEvaluationsPage.jsx';
 import { EmployeeReportPage } from './pages/reports/EmployeeReportPage.jsx';
 import { ReportsPage } from './pages/reports/ReportsPage.jsx';
+import { GoalsPage } from './pages/goals/GoalsPage.jsx';
+import { SelfAssessmentsPage } from './pages/self/SelfAssessmentsPage.jsx';
+import { ProfilePage } from './pages/employee/ProfilePage.jsx';
 
-// The pages that are finished. Every other menu entry still shows "built in the next step".
+// Which page belongs to each menu address.
 const PAGES = {
+  '/goals': GoalsPage,
+  '/self-assessments': SelfAssessmentsPage,
+  '/profile': ProfilePage,
   '/companies': CompaniesPage,
   '/managers': ManagersPage,
   '/employees': EmployeesPage,

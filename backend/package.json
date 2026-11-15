@@ -11,7 +11,9 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "node --env-file=.env prisma/seed.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:unit": "node --env-file=.env.test --test test/unit/*.test.js",
+    "test:api": "node scripts/test-api.js"
   },
   "engines": {
     "node": ">=20"

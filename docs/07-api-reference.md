@@ -66,6 +66,7 @@ The detailed rules (company wall, "only your own", status checks) are enforced b
 | Method | Path | Who | Notes |
 |---|---|---|---|
 | GET | `/health` | Anyone | "The backend is running" |
+| GET | `/health/ready` | Anyone | Also checks the database (503 if it is not reachable) |
 
 ### Auth — `/auth`
 | Method | Path | Who | Body / notes |

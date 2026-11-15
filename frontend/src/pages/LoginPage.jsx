@@ -1,7 +1,7 @@
 // The login page.
 
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../auth/useAuth.js';
 import { Alert, ErrorAlert, Field } from '../components/ui.jsx';
 import { PasswordInput } from '../components/PasswordInput.jsx';
@@ -9,7 +9,6 @@ import { fieldError } from '../utils/format.js';
 
 export function LoginPage() {
   const { user, login, notice } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
 
   const [email, setEmail] = useState('');
@@ -17,18 +16,20 @@ export function LoginPage() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Already logged in? Go straight to the app.
-  if (user) return <Navigate to="/dashboard" replace />;
+  // Logged in (already, or just now)? Go to the page the user wanted, or to the dashboard.
+  // (This also runs right after a successful login, so it must use the same target.)
+  if (user) {
+    const target = user.mustChangePassword ? '/change-password' : (location.state?.from ?? '/dashboard');
+    return <Navigate to={target} replace />;
+  }
 
   async function handleSubmit(event) {
     event.preventDefault(); // stop the browser from reloading the page
     setError(null);
     setSubmitting(true);
     try {
-      const loggedIn = await login(email, password);
-      // Go back to the page the user wanted, or to the dashboard.
-      const target = loggedIn.mustChangePassword ? '/change-password' : (location.state?.from ?? '/dashboard');
-      navigate(target, { replace: true });
+      // After this, the "Logged in?" check above sends the user to the right page.
+      await login(email, password);
     } catch (err) {
       setError(err);
     } finally {

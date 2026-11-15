@@ -19,6 +19,15 @@ const env = {
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX ?? 1000),
   // How many FAILED logins are allowed for one email from one computer per 15 minutes.
   loginMaxFailures: Number(process.env.LOGIN_MAX_FAILURES ?? 5),
+
+  // Deployment settings (Phase 12).
+  // true = this backend also serves the built React app (frontend/dist), so the whole
+  // system runs as ONE program on ONE address. In development we use Vite instead.
+  serveFrontend: process.env.SERVE_FRONTEND === 'true',
+  frontendDist: process.env.FRONTEND_DIST ?? '../frontend/dist',
+  // How many proxies (for example nginx) sit in front of the backend. 0 = none.
+  // Needed so the rate limits see each visitor's real address, not the proxy's.
+  trustProxy: Number(process.env.TRUST_PROXY ?? 0),
 };
 
 // Stop immediately with a clear message if a setting is wrong or missing,
@@ -42,6 +51,20 @@ if (!Number.isInteger(env.rateLimitMax) || env.rateLimitMax < 1) {
 
 if (!Number.isInteger(env.loginMaxFailures) || env.loginMaxFailures < 1) {
   throw new Error('LOGIN_MAX_FAILURES in .env must be a whole number of 1 or more, for example LOGIN_MAX_FAILURES=5');
+}
+
+if (!Number.isInteger(env.trustProxy) || env.trustProxy < 0) {
+  throw new Error('TRUST_PROXY in .env must be 0 or a positive whole number, for example TRUST_PROXY=1');
+}
+
+// Extra checks for production: mistakes here would be unsafe on a real server.
+if (env.nodeEnv === 'production') {
+  if (env.jwtSecret.length < 48) {
+    throw new Error('In production, JWT_SECRET must be at least 48 characters long.');
+  }
+  if (!env.serveFrontend && env.corsOrigins.some((origin) => origin.includes('localhost'))) {
+    console.warn('Warning: CORS_ORIGINS still allows localhost. Set it to the real address of the frontend.');
+  }
 }
 
 export default env;

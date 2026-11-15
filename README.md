@@ -3,7 +3,7 @@
 A web system for **Taf Energies** (the Holding) and its companies to manage employees, set goals,
 run performance evaluations with an approval step, and see reports across all companies.
 
-> **Development version.** It contains demo data only. It has not been deployed to company infrastructure.
+> **Version 1, ready for deployment.** The development database contains demo data only. It has not been deployed to company infrastructure.
 
 ---
 
@@ -161,6 +161,8 @@ The API tests use their own database (`taf_ems_test`) and port 4001; set them up
 | [05 — Testing](docs/05-testing.md) | Test types, how to run them, manual checklist, results |
 | [06 — User guide](docs/06-user-guide.md) | How to use the system, for each role |
 | [07 — API reference](docs/07-api-reference.md) | Every endpoint, who may use it, and the error format |
+| [08 — Deployment](docs/08-deployment.md) | How to run it in production, settings, backups, updates, go-live checklist |
+| [09 — Hand-over](docs/09-handover.md) | What was delivered, where to start, decisions to confirm, limitations, next ideas |
 
 ---
 
@@ -178,7 +180,7 @@ The API tests use their own database (`taf_ems_test`) and port 4001; set them up
 - [x] Phase 9 — Advanced React (pages for all three roles)
 - [x] Phase 10 — Full-stack integration (frontend ↔ backend, user guide, API reference)
 - [x] Phase 11 — Testing and QA (`docs/05-testing.md`)
-- [ ] Phase 12 — Deployment readiness
+- [x] Phase 12 — Deployment readiness (`docs/08-deployment.md`, `docs/09-handover.md`)
 
 ---
 

@@ -13,6 +13,9 @@ export function AuthProvider({ children }) {
   const [checking, setChecking] = useState(Boolean(tokenStore.get()));
   // a message to show on the login page, e.g. "Your session has expired"
   const [notice, setNotice] = useState('');
+  // true after the user pressed "Log out": the next person to log in starts on the dashboard,
+  // not on the page the previous person was looking at.
+  const [loggedOut, setLoggedOut] = useState(false);
 
   const clearSession = useCallback((message = '') => {
     tokenStore.clear();
@@ -43,6 +46,7 @@ export function AuthProvider({ children }) {
     const data = await api.post('/auth/login', { email, password });
     tokenStore.set(data.token);
     setNotice('');
+    setLoggedOut(false);
     setUser(data.user);
     return data.user;
   }, []);
@@ -53,6 +57,7 @@ export function AuthProvider({ children }) {
     } catch {
       // Even if this fails, we still log out on this device.
     }
+    setLoggedOut(true);
     clearSession('You have been logged out.');
   }, [clearSession]);
 
@@ -68,8 +73,8 @@ export function AuthProvider({ children }) {
 
   // useMemo: only create a new object when something inside it changed.
   const value = useMemo(
-    () => ({ user, checking, notice, login, logout, changePassword, refreshUser }),
-    [user, checking, notice, login, logout, changePassword, refreshUser],
+    () => ({ user, checking, notice, loggedOut, login, logout, changePassword, refreshUser }),
+    [user, checking, notice, loggedOut, login, logout, changePassword, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

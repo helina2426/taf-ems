@@ -11,13 +11,14 @@ import { Spinner } from '../components/ui.jsx';
 import { useAuth } from './useAuth.js';
 
 export function RequireAuth({ roles, children }) {
-  const { user, checking } = useAuth();
+  const { user, checking, loggedOut } = useAuth();
   const location = useLocation();
 
   if (checking) return <Spinner label="Loading your session…" fullPage />;
 
-  // Not logged in → login page (and come back here afterwards).
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  // Not logged in → login page, and come back here afterwards
+  // (unless the user just logged out on purpose: then the next login starts on the dashboard).
+  if (!user) return <Navigate to="/login" replace state={loggedOut ? undefined : { from: location.pathname }} />;
 
   // First login → the password must be changed before anything else.
   if (user.mustChangePassword && location.pathname !== '/change-password') {

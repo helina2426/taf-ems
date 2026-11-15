@@ -1,76 +1,183 @@
 # Taf EMS — Employee Management and Performance Evaluation System
 
-A system for **Taf Energies** that manages employees and their performance evaluations across multiple companies operating under one central Holding.
+A web system for **Taf Energies** (the Holding) and its companies to manage employees, set goals,
+run performance evaluations with an approval step, and see reports across all companies.
 
-- The **Holding** oversees all companies, assigns Managers, compares performance, and approves evaluations.
-- Each **Manager** manages the employees of their own company and evaluates them.
-- Each **Employee** views their goals, submits self-assessments, and sees published results.
+> **Development version.** It contains demo data only. It has not been deployed to company infrastructure.
 
-## Tech stack
+---
 
-| Part | Technology |
+## What it does
+
+| Area | Features |
 |---|---|
-| Frontend | React (JavaScript) |
-| Backend | Node.js + Express.js (JavaScript) |
-| Database | PostgreSQL 17 |
-| Database access | Prisma ORM |
-| Authentication | JWT + bcrypt |
-| API testing | Postman |
+| **Organization** | Companies, one Manager per company, employees, transfers between companies, Holding users with approval permission |
+| **Goals** | Goals with KPI, target and deadline; employees report progress; status follows progress automatically |
+| **Self-assessment** | Private drafts, submit once per period; Managers see who has submitted |
+| **Evaluations** | Weighted criteria (1–5 per criterion, weights add up to 100%); Managers evaluate employees, the Holding evaluates Managers |
+| **Approval** | Submit → approve or return with a reason → publish → the person acknowledges; full review history |
+| **Reports** | Role dashboards, completion per company, company comparison, Manager performance, employee history |
+| **Audit log** | Logins and every important change, with who and when (read only) |
+| **Security** | Hashed passwords, signed tokens, role checks and a company wall on every request, rate limits, security headers |
+
+**Three roles:** **Holding** (sees everything; approvers approve and publish), **Manager** (their own company only),
+**Employee** (their own profile, goals, self-assessment and published results).
+
+---
+
+## Technology
+
+| Part | Tools |
+|---|---|
+| Backend | Node.js 24, Express 5, Prisma 7, PostgreSQL 17, JWT (jose), bcrypt, zod |
+| Frontend | React 19, React Router 8, Vite 8, plain CSS |
+| Testing | Node's built-in test runner, Postman collection run with Newman |
+
+All in **JavaScript** (no TypeScript). Package versions are pinned exactly.
+
+---
 
 ## Project structure
 
 ```
 taf-ems/
-├── backend/    # Express API (Phase 3)
-├── frontend/   # React app (Phase 8)
-└── docs/       # Requirements, design, and progress documents
+├── backend/
+│   ├── prisma/            database schema, migrations, demo data (seed.js)
+│   ├── src/
+│   │   ├── config/        settings (env.js) and the database client
+│   │   ├── middleware/    login check, role check, validation, rate limits, errors
+│   │   ├── shared/        helpers used by every module (audit log, tokens, passwords…)
+│   │   └── modules/       one folder per feature: routes → controller → service → repository
+│   ├── scripts/           test-api.js (automated API tests)
+│   ├── test/unit/         unit tests
+│   └── postman/           Postman collection and environment
+├── frontend/
+│   ├── src/
+│   │   ├── api/           the one place that talks to the backend
+│   │   ├── auth/          login state and page guards
+│   │   ├── components/    reusable pieces (modal, tables, badges…)
+│   │   ├── pages/         one file per page, grouped by area
+│   │   └── utils/         small helpers
+│   └── test/              unit tests
+└── docs/                  analysis, design, security, testing, user guide, API reference
 ```
 
-## Development progress
+---
 
-- [x] Phase 0 — SRS analysis (`docs/01-srs-analysis.md`)
-- [x] Phase 1 — Development environment setup
-- [x] Phase 2 — JavaScript essentials
-- [x] Phase 3 — Backend setup and architecture
-- [x] Phase 4 — Database design (ERD, Prisma schema)
-- [ ] Phase 5 — Backend modules
-- [ ] Phase 6 — API testing with Postman
-- [ ] Phase 7 — Security review
-- [ ] Phase 8 — React setup
-- [ ] Phase 9 — Advanced React
-- [ ] Phase 10 — Full-stack integration
-- [ ] Phase 11 — Testing and QA
-- [ ] Phase 12 — Deployment readiness
+## Getting started (development)
 
-## Running the backend
+### 1. What you need
+- **Node.js 24** and npm
+- **PostgreSQL 17** running on port 5432
+- Git
 
-First-time setup:
+### 2. Create the databases (once)
+In `psql` as the PostgreSQL administrator (`psql -U postgres -h localhost`):
+```sql
+CREATE USER taf_ems_user WITH PASSWORD 'choose-a-password' CREATEDB;
+CREATE DATABASE taf_ems_dev OWNER taf_ems_user;
+CREATE DATABASE taf_ems_test OWNER taf_ems_user;
+```
 
+### 3. Backend
 ```bash
 cd backend
-cp .env.example .env    # then edit .env with your real values
-npm install             # installs the libraries
-npm run db:migrate      # creates the database tables
-npm run db:generate     # creates the Prisma Client used by the code
-npm run db:seed         # adds fake sample data (development only)
+npm install
+cp .env.example .env            # then fill in the password and a new JWT_SECRET
+npm run db:migrate              # creates the tables
+npm run db:seed                 # loads the demo data
+npm run dev                     # http://localhost:4000/api/health
 ```
+Make a JWT secret with:
+`node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`
 
-Every day:
-
-API tests: import the two files in `backend/postman/` into Postman, then select the "Taf EMS - Local" environment.
-
+### 4. Frontend (in a second terminal)
 ```bash
-npm run dev             # starts the server and restarts it when files change
-npm run db:studio       # optional: view the database in the browser
+cd frontend
+npm install
+npm run dev                     # http://localhost:5173
 ```
+During development, Vite forwards every `/api` request to the backend on port 4000.
 
-Check it works: open http://localhost:4000/api/health
+### 5. Demo accounts
+All demo accounts use the password **`ChangeMe123!`**.
 
-Database design: `docs/03-database-design.md` and `docs/Taf-EMS-ERD.png`.
+| Role | Person | Email |
+|---|---|---|
+| Holding — primary user | — | `head@demo.local` |
+| Holding — must change password at first login | — | `hr@demo.local` |
+| Manager — Alpha Energy | Selam Tesfaye | `manager.alpha@demo.local` |
+| Manager — Beta Logistics | Yonas Alemu | `manager.beta@demo.local` |
+| Employee — Alpha | Dawit Bekele | `employee1.alpha@demo.local` |
+| Employee — Alpha | Hanna Girma | `employee2.alpha@demo.local` |
+| Employee — Beta | Meron Haile | `employee1.beta@demo.local` |
+| Employee — Beta | Samuel Tadesse | `employee2.beta@demo.local` |
 
-## Local environment
+---
 
-- Node.js v24, npm 11
-- PostgreSQL 17 on port 5432
+## Commands
 
-> This is a confidential company project. Do not upload real employee data.
+| Where | Command | What it does |
+|---|---|---|
+| backend | `npm run dev` | Start the API with automatic restart on changes |
+| backend | `npm start` | Start the API (no automatic restart) |
+| backend | `npm run db:migrate` | Apply database migrations |
+| backend | `npm run db:seed` | Load the demo data |
+| backend | `npm run db:studio` | Open Prisma Studio to look at the data |
+| backend | `npm run test:unit` | Backend unit tests (needs `.env.test`) |
+| backend | `npm run test:api` | Full API test run on a fresh test database |
+| frontend | `npm run dev` | Start the React app |
+| frontend | `npm run build` | Build the app for production (into `dist/`) |
+| frontend | `npm test` | Frontend unit tests |
+
+**To start again with clean demo data:** stop the backend, then `npx prisma migrate reset` and `npm run db:seed`
+(⚠️ this deletes everything in `taf_ems_dev`).
+
+---
+
+## Testing
+
+| Tests | Result |
+|---|---|
+| Backend unit tests | 26 / 26 |
+| Frontend unit tests | 15 / 15 |
+| API tests (355 requests on a fresh test database) | 479 / 479 |
+
+The API tests use their own database (`taf_ems_test`) and port 4001; set them up by copying
+`backend/.env.test.example` to `backend/.env.test`. Details and the manual checklist: [docs/05-testing.md](docs/05-testing.md).
+
+---
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [01 — SRS analysis](docs/01-srs-analysis.md) | Requirements, roles, workflows, questions for the supervisor |
+| [02 — Environment](docs/02-environment.md) | Tools and versions used |
+| [03 — Database design](docs/03-database-design.md) | ERD, tables, rules, design decisions |
+| [04 — Security](docs/04-security.md) | Threats and protections, settings, known limitations |
+| [05 — Testing](docs/05-testing.md) | Test types, how to run them, manual checklist, results |
+| [06 — User guide](docs/06-user-guide.md) | How to use the system, for each role |
+| [07 — API reference](docs/07-api-reference.md) | Every endpoint, who may use it, and the error format |
+
+---
+
+## Project phases
+
+- [x] 0 — Requirements analysis
+- [x] 1 — Development environment
+- [x] 2 — JavaScript fundamentals (learning)
+- [x] 3 — Backend setup
+- [x] 4 — Database design
+- [x] 5 — Backend modules (11)
+- [x] 6 — API testing with Postman
+- [x] 7 — Security hardening
+- [x] 8 — React frontend
+- [x] 9 — Testing
+- [x] 10 — Documentation
+- [ ] 11 — Deployment preparation
+- [ ] 12 — Hand-over
+
+---
+
+*Built during an internship at Taf Energies. Internal use only.*

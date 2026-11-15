@@ -85,6 +85,7 @@ cd backend
 npm install
 cp .env.example .env            # then fill in the password and a new JWT_SECRET
 npm run db:migrate              # creates the tables
+npm run db:generate             # creates the Prisma Client the code uses (not stored in Git)
 npm run db:seed                 # loads the demo data
 npm run dev                     # http://localhost:4000/api/health
 ```
@@ -122,6 +123,7 @@ All demo accounts use the password **`ChangeMe123!`**.
 | backend | `npm run dev` | Start the API with automatic restart on changes |
 | backend | `npm start` | Start the API (no automatic restart) |
 | backend | `npm run db:migrate` | Apply database migrations |
+| backend | `npm run db:generate` | Re-create the Prisma Client after a fresh clone or a schema change |
 | backend | `npm run db:seed` | Load the demo data |
 | backend | `npm run db:studio` | Open Prisma Studio to look at the data |
 | backend | `npm run test:unit` | Backend unit tests (needs `.env.test`) |
@@ -164,20 +166,22 @@ The API tests use their own database (`taf_ems_test`) and port 4001; set them up
 
 ## Project phases
 
-- [x] 0 — Requirements analysis
-- [x] 1 — Development environment
-- [x] 2 — JavaScript fundamentals (learning)
-- [x] 3 — Backend setup
-- [x] 4 — Database design
-- [x] 5 — Backend modules (11)
-- [x] 6 — API testing with Postman
-- [x] 7 — Security hardening
-- [x] 8 — React frontend
-- [x] 9 — Testing
-- [x] 10 — Documentation
-- [ ] 11 — Deployment preparation
-- [ ] 12 — Hand-over
+- [x] Phase 0 — SRS analysis (`docs/01-srs-analysis.md`)
+- [x] Phase 1 — Development environment setup
+- [x] Phase 2 — JavaScript essentials
+- [x] Phase 3 — Backend setup and architecture
+- [x] Phase 4 — Database design (ERD, Prisma schema)
+- [x] Phase 5 — Backend modules (11 modules)
+- [x] Phase 6 — API testing with Postman
+- [x] Phase 7 — Security review (`docs/04-security.md`)
+- [x] Phase 8 — React setup
+- [x] Phase 9 — Advanced React (pages for all three roles)
+- [x] Phase 10 — Full-stack integration (frontend ↔ backend, user guide, API reference)
+- [x] Phase 11 — Testing and QA (`docs/05-testing.md`)
+- [ ] Phase 12 — Deployment readiness
 
 ---
+
+> This is a confidential company project. Do not upload real employee data.
 
 *Built during an internship at Taf Energies. Internal use only.*

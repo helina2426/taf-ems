@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/useAuth.js';
 import { Alert, ErrorAlert, Field } from '../components/ui.jsx';
+import { PasswordInput } from '../components/PasswordInput.jsx';
 import { fieldError } from '../utils/format.js';
 
 export function LoginPage() {
@@ -57,13 +58,7 @@ export function LoginPage() {
           />
         </Field>
         <Field label="Password" error={fieldError(error, 'password')}>
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
 
         <button className="btn btn-primary btn-block" type="submit" disabled={submitting}>

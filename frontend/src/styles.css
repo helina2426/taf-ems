@@ -1039,6 +1039,39 @@ input[type='range'] {
   background: var(--color-bg);
 }
 
+
+/* ---------- Password box with Show / Hide ---------- */
+
+.password-input {
+  position: relative;
+  display: flex;
+}
+
+.password-input input {
+  flex: 1;
+  padding-right: 70px; /* room for the button */
+}
+
+.password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.password-toggle:hover {
+  background: var(--color-primary-soft);
+}
+
 /* ---------- Small screens (phones) ---------- */
 
 @media (max-width: 800px) {

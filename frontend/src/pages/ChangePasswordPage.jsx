@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../auth/useAuth.js';
 import { Alert, ErrorAlert, Field } from '../components/ui.jsx';
+import { PasswordInput } from '../components/PasswordInput.jsx';
 import { fieldError } from '../utils/format.js';
 
 export function ChangePasswordPage() {
@@ -51,13 +52,13 @@ export function ChangePasswordPage() {
         <ErrorAlert error={error && !error.details ? error : null} />
 
         <Field label="Current password" error={fieldError(error, 'currentPassword')}>
-          <input type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+          <PasswordInput value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
         </Field>
         <Field label="New password" error={fieldError(error, 'newPassword')} hint="At least 8 characters, with a letter and a number.">
-          <input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          <PasswordInput autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
         </Field>
         <Field label="Repeat the new password" error={fieldError(error, 'confirmPassword')}>
-          <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          <PasswordInput autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
         </Field>
 
         <button className="btn btn-primary btn-block" type="submit" disabled={submitting}>

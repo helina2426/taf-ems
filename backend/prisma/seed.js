@@ -7,6 +7,8 @@
 import bcrypt from 'bcryptjs';
 import env from '../src/config/env.js';
 import prisma from '../src/config/prisma.js';
+import { buildPlanYear } from '../src/shared/planYear.js';
+import { randomUUID } from 'node:crypto';
 
 // One shared password for every sample account (development only).
 // Sample accounts are ready to use (mustChangePassword = false), EXCEPT hr@demo.local,
@@ -167,6 +169,39 @@ async function main() {
         { name: 'Planning and organization', appliesTo: 'MANAGER', weight: 20 },
         { name: 'Communication with the Holding', appliesTo: 'MANAGER', weight: 20 },
       ],
+    });
+
+    // ---- 7b. Version 2: the current plan year "2019 EFY" ------------------
+    // Hamle 1, 2018 → Sene 30, 2019 (8 July 2026 → 7 July 2027), with its 19 periods.
+    // ACTIVE: the year, and every half, quarter and month that has already started, are OPEN.
+    const planYear = buildPlanYear('ETHIOPIAN', 2019);
+    const cycle = await tx.performanceCycle.create({
+      data: {
+        holdingId: holding.id,
+        name: planYear.name,
+        calendar: 'ETHIOPIAN',
+        year: 2019,
+        startDate: new Date(planYear.startDate),
+        endDate: new Date(planYear.endDate),
+        status: 'ACTIVE',
+        createdById: headUser.id,
+      },
+    });
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' });
+    const periodIds = Object.fromEntries(planYear.periods.map((p) => [p.key, randomUUID()]));
+    await tx.evaluationPeriod.createMany({
+      data: planYear.periods.map((p) => ({
+        id: periodIds[p.key],
+        cycleId: cycle.id,
+        parentId: p.parentKey ? periodIds[p.parentKey] : null,
+        type: p.type,
+        sequence: p.sequence,
+        name: p.name,
+        startDate: new Date(p.startDate),
+        endDate: new Date(p.endDate),
+        status: p.type === 'YEAR' || p.startDate <= today ? 'OPEN' : 'UPCOMING',
+        createdById: headUser.id,
+      })),
     });
 
     // ---- 8. A sample goal in each company --------------------------------

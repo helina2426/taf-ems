@@ -17,3 +17,7 @@ export const changePasswordSchema = z
     message: 'New password must be different from the current password.',
     path: ['newPassword'],
   });
+// Version 2: how dates are shown to this person.
+export const preferencesSchema = z.object({
+  displayCalendar: z.enum(['ETHIOPIAN', 'GREGORIAN'], { error: 'displayCalendar must be ETHIOPIAN or GREGORIAN.' }),
+});

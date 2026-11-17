@@ -23,6 +23,8 @@ import evaluationRoutes from './modules/evaluations/evaluation.routes.js';
 import holdingUserRoutes from './modules/holding-users/holdingUser.routes.js';
 import reportRoutes from './modules/reports/report.routes.js';
 import auditLogRoutes from './modules/audit-logs/auditLog.routes.js';
+import settingsRoutes from './modules/settings/settings.routes.js';
+import planYearRoutes from './modules/plan-years/planYear.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -81,6 +83,9 @@ app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/holding-users', holdingUserRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+// Version 2: plan-based evaluation.
+app.use('/api/settings', settingsRoutes);
+app.use('/api/plan-years', planYearRoutes);
 
 // Production: also serve the built React app (see SERVE_FRONTEND).
 if (env.serveFrontend) {

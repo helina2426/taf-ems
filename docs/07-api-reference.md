@@ -75,6 +75,7 @@ The detailed rules (company wall, "only your own", status checks) are enforced b
 | GET | `/auth/me` | All | The logged-in user |
 | POST | `/auth/change-password` | All | `currentPassword`, `newPassword` → a new `token` (older tokens stop working) |
 | POST | `/auth/logout` | All | Recorded in the audit log; the frontend deletes the token |
+| PATCH | `/auth/preferences` | All | `displayCalendar`: ETHIOPIAN or GREGORIAN — how dates are shown to this person (v2) |
 
 ### Companies — `/companies`
 | Method | Path | Who | Body / notes |
@@ -184,6 +185,28 @@ All accept `?periodId=` (default: the most recent open period).
 | GET | `/reports/companies` | H | Company ranking by average score + whole-Holding numbers |
 | GET | `/reports/managers` | H | Per Manager: submitted, on time, returned, team average, own result |
 | GET | `/reports/employees/:employeeId` | H; M (own employees); the person (published only) | Evaluation history, summary, goals |
+
+### Settings — `/settings` (version 2)
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| GET | `/settings` | H | `holdingName`, `cycleCalendar` |
+| PATCH | `/settings` | H (primary only) | `cycleCalendar`: ETHIOPIAN or GREGORIAN — the calendar of NEW plan years |
+
+### Plan years — `/plan-years` (version 2)
+A plan year ("2019 EFY" = Hamle 1, 2018 → Sene 30, 2019, or "2026 (GC)") has 19 periods: 1 year, 2 halves, 4 quarters, 12 months (Pagume is joined to Nehase).
+
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| GET | `/plan-years` | All | `status`. Without the periods |
+| GET | `/plan-years/preview?year=2020` | H | What the year would look like, in the calendar of the settings. Nothing is saved |
+| GET | `/plan-years/:id` | All | With `periods`: the tree year → halves → quarters → months |
+| POST | `/plan-years` | H | `year` (+ any rule below). Calendar from the settings. Starts as PLANNING. 409 if it exists or overlaps another year |
+| PATCH | `/plan-years/:id` | H | Rules, only while PLANNING: `employeeResultsShare`, `managerResultsShare`, `minKpis`, `maxKpis`, `minKpiWeight`, `maxKpiWeight`, `achievementCap`, `minMonthsForRating`, `appealDays`, `planDeadlineDays`, `safetyCapEnabled` |
+| PATCH | `/plan-years/:id/status` | H | `status`: PLANNING→ACTIVE (opens the year and every period already started), ACTIVE→PLANNING, ACTIVE→CLOSED (closes all 19), CLOSED→ACTIVE (primary only) |
+| PATCH | `/plan-years/:id/months/:periodId/status` | H | `status`: UPCOMING→OPEN, OPEN→CLOSED, CLOSED→OPEN. Only while the year is ACTIVE |
+| DELETE | `/plan-years/:id` | H | Only while PLANNING (the 19 periods are deleted with it) |
+
+The old `/evaluation-periods` endpoints list and change version-1 periods only; the periods of a plan year answer 409 there.
 
 ### Audit log — `/audit-logs`
 | Method | Path | Who | Notes |

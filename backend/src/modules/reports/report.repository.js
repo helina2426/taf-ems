@@ -14,15 +14,16 @@ export const EVALUABLE_STATUSES = ['ACTIVE', 'ON_LEAVE'];
 // ---------- Periods ----------
 
 export function findPeriodById(id) {
-  return prisma.evaluationPeriod.findUnique({ where: { id } });
+  // Version 1 reports only use version-1 periods (not the months and quarters of a plan year).
+  return prisma.evaluationPeriod.findFirst({ where: { id, cycleId: null } });
 }
 
 export function findLatestOpenPeriod() {
-  return prisma.evaluationPeriod.findFirst({ where: { status: 'OPEN' }, orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }] });
+  return prisma.evaluationPeriod.findFirst({ where: { status: 'OPEN', cycleId: null }, orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }] });
 }
 
 export function findLatestPeriod() {
-  return prisma.evaluationPeriod.findFirst({ orderBy: [{ endDate: 'desc' }, { createdAt: 'desc' }] });
+  return prisma.evaluationPeriod.findFirst({ where: { cycleId: null }, orderBy: [{ endDate: 'desc' }, { createdAt: 'desc' }] });
 }
 
 // ---------- Companies ----------

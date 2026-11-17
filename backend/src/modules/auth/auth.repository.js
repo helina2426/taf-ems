@@ -24,6 +24,10 @@ export function updateLastLogin(id) {
   return prisma.user.update({ where: { id }, data: { lastLoginAt: new Date() } });
 }
 
+export function updateDisplayCalendar(id, displayCalendar) {
+  return prisma.user.update({ where: { id }, data: { displayCalendar }, include: authInclude });
+}
+
 export function updatePassword(id, passwordHash) {
   return prisma.user.update({
     where: { id },
@@ -58,5 +62,6 @@ export function toAuthUser(user) {
     firstName: user.employee?.firstName ?? null,
     lastName: user.employee?.lastName ?? null,
     lastLoginAt: user.lastLoginAt,
+    displayCalendar: user.displayCalendar,
   };
 }

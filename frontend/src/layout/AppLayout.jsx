@@ -7,7 +7,8 @@ import { useAuth } from '../auth/useAuth.js';
 import { NAVIGATION, ROLE_LABELS } from './navigation.js';
 
 export function AppLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, setCalendar } = useAuth();
+  const [savingCalendar, setSavingCalendar] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false); // for small screens
   const items = NAVIGATION[user.role] ?? [];
   const name = user.firstName ? `${user.firstName} ${user.lastName}` : user.email;
@@ -28,6 +29,25 @@ export function AppLayout() {
             {user.companyName && ` · ${user.companyName}`}
           </div>
         </div>
+        {/* Version 2: every person chooses how dates are shown. Saved on the server. */}
+        <label className="calendar-switch" title="How dates are shown">
+          <span className="sr-only">Show dates in</span>
+          <select
+            value={user.displayCalendar ?? 'ETHIOPIAN'}
+            disabled={savingCalendar}
+            onChange={async (e) => {
+              setSavingCalendar(true);
+              try {
+                await setCalendar(e.target.value);
+              } finally {
+                setSavingCalendar(false);
+              }
+            }}
+          >
+            <option value="ETHIOPIAN">EC dates</option>
+            <option value="GREGORIAN">GC dates</option>
+          </select>
+        </label>
         <button className="btn btn-ghost" onClick={logout}>
           Log out
         </button>

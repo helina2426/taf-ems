@@ -66,17 +66,39 @@ enum ReviewDecision {
   RETURNED
 }
 
+// ---- Version 2: plan-based evaluation (Module 11) ----
+
+enum CalendarType {
+  ETHIOPIAN
+  GREGORIAN
+}
+
+enum CycleStatus {
+  PLANNING
+  ACTIVE
+  CLOSED
+}
+
+enum PeriodType {
+  YEAR
+  HALF
+  QUARTER
+  MONTH
+}
+
 // ----------------------------------------------------------------------------
 // ORGANIZATION
 // ----------------------------------------------------------------------------
 
 model Holding {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String
+  cycleCalendar CalendarType @default(ETHIOPIAN) // which calendar NEW plan years follow
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   companies Company[]
+  cycles    PerformanceCycle[]
 }
 
 model Company {
@@ -104,17 +126,18 @@ model Company {
 // ----------------------------------------------------------------------------
 
 model User {
-  id                    String    @id @default(uuid()) @db.Uuid
-  email                 String    @unique
+  id                    String       @id @default(uuid()) @db.Uuid
+  email                 String       @unique
   passwordHash          String
   role                  Role
-  isPrimaryHoldingUser  Boolean   @default(false)
-  canApproveEvaluations Boolean   @default(false)
-  isActive              Boolean   @default(true)
-  mustChangePassword    Boolean   @default(true)
+  isPrimaryHoldingUser  Boolean      @default(false)
+  canApproveEvaluations Boolean      @default(false)
+  isActive              Boolean      @default(true)
+  mustChangePassword    Boolean      @default(true)
   lastLoginAt           DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  displayCalendar       CalendarType @default(ETHIOPIAN) // how this person sees dates
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 
   employee             Employee?
   managerAssignments   ManagerAssignment[]  @relation("AssignedManager")
@@ -126,6 +149,7 @@ model User {
   evaluationsPublished Evaluation[]         @relation("PublishedBy")
   reviews              EvaluationReview[]
   auditLogs            AuditLog[]
+  cyclesCreated        PerformanceCycle[]
 }
 
 model Employee {
@@ -221,9 +245,50 @@ model GoalProgressUpdate {
 // EVALUATION SETUP
 // ----------------------------------------------------------------------------
 
+// One plan year (version 2). Its 19 periods are rows of EvaluationPeriod.
+// The rules of the year are stored here, so changing them next year never changes this year.
+model PerformanceCycle {
+  id        String       @id @default(uuid()) @db.Uuid
+  holdingId String       @db.Uuid
+  name      String       @unique // "2019 EFY" or "2026 (GC)"
+  calendar  CalendarType // copied from the Holding when the year is created
+  year      Int // 2019 (Ethiopian) or 2026 (Gregorian)
+  startDate DateTime     @db.Date
+  endDate   DateTime     @db.Date
+  status    CycleStatus  @default(PLANNING)
+
+  // The rules of this year. The Head can change them only while the year is PLANNING.
+  employeeResultsShare Int     @default(70) // points for KPIs; behaviours get the rest
+  managerResultsShare  Int     @default(80)
+  minKpis              Int     @default(3)
+  maxKpis              Int     @default(7)
+  minKpiWeight         Int     @default(10)
+  maxKpiWeight         Int     @default(40)
+  achievementCap       Int     @default(120) // percent
+  minMonthsForRating   Int     @default(6)
+  appealDays           Int     @default(14)
+  planDeadlineDays     Int     @default(30)
+  safetyCapEnabled     Boolean @default(false)
+
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  holding   Holding            @relation(fields: [holdingId], references: [id])
+  createdBy User               @relation(fields: [createdById], references: [id])
+  periods   EvaluationPeriod[]
+
+  @@index([holdingId])
+  @@index([startDate])
+}
+
 model EvaluationPeriod {
   id          String       @id @default(uuid()) @db.Uuid
   name        String       @unique
+  cycleId     String?      @db.Uuid // empty for version-1 periods
+  type        PeriodType   @default(YEAR)
+  parentId    String?      @db.Uuid // month → its quarter, quarter → its half, half → the year
+  sequence    Int          @default(1) // months 1-12, quarters 1-4, halves 1-2
   startDate   DateTime     @db.Date
   endDate     DateTime     @db.Date
   status      PeriodStatus @default(UPCOMING)
@@ -231,10 +296,16 @@ model EvaluationPeriod {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  createdBy       User              @relation(fields: [createdById], references: [id])
+  createdBy       User               @relation(fields: [createdById], references: [id])
+  cycle           PerformanceCycle?  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  parent          EvaluationPeriod?  @relation("PeriodTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children        EvaluationPeriod[] @relation("PeriodTree")
   goals           PerformanceGoal[]
   selfAssessments SelfAssessment[]
   evaluations     Evaluation[]
+
+  @@unique([cycleId, type, sequence])
+  @@index([parentId])
 }
 
 model EvaluationCriterion {

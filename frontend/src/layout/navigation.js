@@ -7,10 +7,12 @@ export const NAVIGATION = {
     { to: '/managers', label: 'Managers' },
     { to: '/employees', label: 'Employees' },
     { to: '/evaluations', label: 'Evaluations' },
+    { to: '/plan-years', label: 'Plan years' },
     { to: '/evaluation-setup', label: 'Periods & criteria' },
     { to: '/reports', label: 'Reports' },
     { to: '/holding-users', label: 'Holding users' },
     { to: '/audit-log', label: 'Audit log' },
+    { to: '/settings', label: 'Settings' },
   ],
   MANAGER: [
     { to: '/dashboard', label: 'Dashboard' },

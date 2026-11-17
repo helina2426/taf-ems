@@ -89,6 +89,23 @@ export async function changePassword(authUser, { currentPassword, newPassword })
   return { token, expiresIn: env.jwtExpiresIn };
 }
 
+// Version 2: each person chooses how dates are SHOWN (Ethiopian or Gregorian).
+// It never changes any data — dates are always stored in Gregorian.
+export async function updatePreferences(authUser, { displayCalendar }) {
+  const before = authUser.displayCalendar;
+  const user = await authRepository.updateDisplayCalendar(authUser.id, displayCalendar);
+  if (before !== displayCalendar) {
+    await recordAudit({
+      userId: authUser.id,
+      action: 'PREFERENCES_UPDATED',
+      entityType: 'User',
+      entityId: authUser.id,
+      details: { displayCalendar: { from: before, to: displayCalendar } },
+    });
+  }
+  return authRepository.toAuthUser(user);
+}
+
 export async function logout(authUser, requestInfo) {
   // A token cannot be "taken back"; the frontend deletes it.
   // We record the logout so the audit history is complete.

@@ -44,7 +44,8 @@ export function findEmployeeByUserId(userId, db = prisma) {
 }
 
 export function findPeriodById(id, db = prisma) {
-  return db.evaluationPeriod.findUnique({ where: { id } });
+  // Version 1 features only use version-1 periods (not the months and quarters of a plan year).
+  return db.evaluationPeriod.findFirst({ where: { id, cycleId: null } });
 }
 
 export function findActiveCriteria(appliesTo, db = prisma) {

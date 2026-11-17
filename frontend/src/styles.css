@@ -1074,6 +1074,78 @@ input[type='range'] {
 
 /* ---------- Small screens (phones) ---------- */
 
+/* ---------- Version 2: calendar switch and plan years (Module 11) ---------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.calendar-switch select {
+  width: auto;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+
+.tree-table .row-half td {
+  background: var(--color-primary-soft);
+  font-weight: 600;
+}
+
+.tree-table .row-quarter td {
+  background: #faf8f6;
+  font-weight: 600;
+}
+
+.tree-table .indent-1 {
+  padding-left: 22px;
+}
+
+.tree-table .indent-2 {
+  padding-left: 40px;
+}
+
+.form-grid-2 > .alert,
+.form-grid-2 > .checkbox {
+  grid-column: 1 / -1;
+}
+
+.rules-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.rules-list > div {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+}
+
+.rules-list dt {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+}
+
+.rules-list dd {
+  margin: 2px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.preview-months {
+  columns: 2;
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 0.88rem;
+}
+
 @media (max-width: 800px) {
   .menu-toggle {
     display: block;
@@ -1114,5 +1186,16 @@ input[type='range'] {
 
   .score-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Very small phones: the calendar switch needs the room of the name in the top bar. */
+@media (max-width: 480px) {
+  .topbar-user {
+    display: none;
+  }
+
+  .calendar-switch {
+    margin-left: auto;
   }
 }

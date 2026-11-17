@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, setUnauthorizedHandler, tokenStore } from '../api/client.js';
 import { AuthContext } from './authContextObject.js';
+import { setDisplayCalendar } from '../utils/format.js';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -71,10 +72,20 @@ export function AuthProvider({ children }) {
     [refreshUser],
   );
 
+  // Version 2: show every date in the calendar this person chose (Ethiopian by default).
+  // Done here, before the pages draw, so every page uses the right calendar.
+  setDisplayCalendar(user?.displayCalendar);
+
+  // Saves "show my dates in Ethiopian / Gregorian" and redraws the pages.
+  const setCalendar = useCallback(async (displayCalendar) => {
+    const data = await api.patch('/auth/preferences', { displayCalendar });
+    setUser(data.user);
+  }, []);
+
   // useMemo: only create a new object when something inside it changed.
   const value = useMemo(
-    () => ({ user, checking, notice, loggedOut, login, logout, changePassword, refreshUser }),
-    [user, checking, notice, loggedOut, login, logout, changePassword, refreshUser],
+    () => ({ user, checking, notice, loggedOut, login, logout, changePassword, refreshUser, setCalendar }),
+    [user, checking, notice, loggedOut, login, logout, changePassword, refreshUser, setCalendar],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

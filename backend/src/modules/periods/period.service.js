@@ -33,6 +33,13 @@ async function getPeriodOrFail(id, db) {
   return period;
 }
 
+// The periods of a plan year (version 2) are changed only through the plan-year endpoints.
+function assertNotPlanYearPeriod(period) {
+  if (period.cycleId) {
+    throw AppError.conflict('This period belongs to a plan year. Change it on the Plan years page.');
+  }
+}
+
 async function assertNameIsFree(name, excludeId, db) {
   if (await periodRepository.findByName(name, excludeId, db)) {
     throw AppError.conflict('An evaluation period with this name already exists.');
@@ -72,6 +79,7 @@ export async function createPeriod(data, user) {
 export async function updatePeriod(id, data, user) {
   const period = await prisma.$transaction(async (tx) => {
     const before = await getPeriodOrFail(id, tx);
+    assertNotPlanYearPeriod(before);
     if (before.status === 'CLOSED') {
       throw AppError.conflict('A closed period cannot be changed. Reopen it first.');
     }
@@ -110,6 +118,7 @@ export async function updatePeriod(id, data, user) {
 export async function setPeriodStatus(id, { status }, user) {
   const period = await prisma.$transaction(async (tx) => {
     const before = await getPeriodOrFail(id, tx);
+    assertNotPlanYearPeriod(before);
 
     if (before.status === status) {
       throw AppError.conflict(`The period is already ${status}.`);

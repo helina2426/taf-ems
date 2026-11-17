@@ -23,6 +23,9 @@ import { ReportsPage } from './pages/reports/ReportsPage.jsx';
 import { GoalsPage } from './pages/goals/GoalsPage.jsx';
 import { SelfAssessmentsPage } from './pages/self/SelfAssessmentsPage.jsx';
 import { ProfilePage } from './pages/employee/ProfilePage.jsx';
+import { PlanYearsPage } from './pages/holding/PlanYearsPage.jsx';
+import { PlanYearDetailPage } from './pages/holding/PlanYearDetailPage.jsx';
+import { SettingsPage } from './pages/holding/SettingsPage.jsx';
 
 // Which page belongs to each menu address.
 const PAGES = {
@@ -38,6 +41,8 @@ const PAGES = {
   '/my-evaluations': MyEvaluationsPage,
   '/reports': ReportsPage,
   '/audit-log': AuditLogPage,
+  '/plan-years': PlanYearsPage,
+  '/settings': SettingsPage,
 };
 
 // For each menu entry (except the dashboard), work out which roles have it in their menu,
@@ -78,6 +83,14 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             {/* Pages opened from a list (not in the menu). */}
             <Route path="/evaluations/:id" element={<EvaluationDetailPage />} />
+            <Route
+              path="/plan-years/:id"
+              element={
+                <RequireAuth roles={['HOLDING']}>
+                  <PlanYearDetailPage />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/reports/employees/:employeeId"
               element={

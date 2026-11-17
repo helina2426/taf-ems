@@ -8,9 +8,11 @@ const periodInclude = {
   _count: { select: { goals: true, selfAssessments: true, evaluations: true } },
 };
 
+// The "Periods & criteria" page lists version-1 periods only. The 19 periods of each
+// plan year (version 2) are managed on the Plan years page.
 export function findMany({ status }) {
   return prisma.evaluationPeriod.findMany({
-    where: { ...(status && { status }) },
+    where: { cycleId: null, ...(status && { status }) },
     include: periodInclude,
     orderBy: { startDate: 'desc' },
   });
@@ -27,7 +29,7 @@ export function findByName(name, excludeId, db = prisma) {
 }
 
 export function countOpen(db = prisma) {
-  return db.evaluationPeriod.count({ where: { status: 'OPEN' } });
+  return db.evaluationPeriod.count({ where: { status: 'OPEN', cycleId: null } });
 }
 
 export function create(data, db = prisma) {

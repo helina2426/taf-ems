@@ -1229,6 +1229,76 @@ input[type='range'] {
   width: auto;
 }
 
+/* ---------- Version 2: monthly progress (Module 13) ---------- */
+
+.progress-section {
+  margin-top: 28px;
+}
+
+.progress-section .section-head select {
+  width: auto;
+  max-width: 240px;
+}
+
+.actual-inputs input,
+.comments-grid textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.actual-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.actual-inputs input[type='number'] {
+  width: 130px;
+  text-align: right;
+}
+
+.actual-inputs input:not([type='number']) {
+  width: 200px;
+  font-size: 0.85rem;
+}
+
+.progress-table td,
+.summary-table td {
+  vertical-align: top;
+}
+
+.comments-grid {
+  margin: 12px 0 8px;
+}
+
+.comments-grid textarea {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.light {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.light-green {
+  background: var(--color-success);
+}
+
+.light-yellow {
+  background: #d99a00;
+}
+
+.light-red {
+  background: var(--color-error);
+}
+
 /* Very small phones: the calendar switch needs the room of the name in the top bar. */
 @media (max-width: 480px) {
   .topbar-user {

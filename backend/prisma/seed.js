@@ -210,6 +210,23 @@ async function main() {
     // Beta, and Alpha's second employee, have no plan yet: you can practise on them.
     const months = await tx.evaluationPeriod.findMany({ where: { cycleId: cycle.id, type: 'MONTH' }, orderBy: { sequence: 'asc' } });
     const now = new Date();
+    // Module 13: demo actual numbers. Months that are already over get CONFIRMED numbers;
+    // the month we are in gets one number that is still waiting for the Manager's confirmation.
+    const finished = months.filter((m) => m.endDate.toISOString().slice(0, 10) < today);
+    const current = months.find((m) => m.startDate.toISOString().slice(0, 10) <= today && today <= m.endDate.toISOString().slice(0, 10));
+    async function addActuals(kpiId, values, confirmer, enterer, currentValue) {
+      for (const [i, month] of finished.entries()) {
+        if (values[i] === undefined) break;
+        await tx.kpiMonth.update({
+          where: { kpiId_periodId: { kpiId, periodId: month.id } },
+          data: { actual: values[i], enteredById: enterer, enteredAt: now, confirmedById: confirmer, confirmedAt: now },
+        });
+      }
+      if (current && currentValue !== undefined) {
+        await tx.kpiMonth.update({ where: { kpiId_periodId: { kpiId, periodId: current.id } }, data: { actual: currentValue, enteredById: enterer, enteredAt: now } });
+      }
+    }
+
     async function makePlan(level, scope, extra, kpis) {
       const plan = await tx.plan.create({
         data: { cycleId: cycle.id, level, scope, status: 'ACTIVE', createdById: headUser.id, approvedById: headUser.id, approvedAt: now, ...extra },
@@ -238,13 +255,26 @@ async function main() {
       { key: 'safety', parent: H.safety, perspective: 'INTERNAL_PROCESS', name: 'Safety incidents', unit: 'incidents', direction: 'ZERO', yearTarget: 0, weight: 10 },
       { key: 'training', parent: H.training, perspective: 'LEARNING_GROWTH', name: 'Training hours per employee', unit: 'hours', direction: 'HIGHER_IS_BETTER', yearTarget: 40, weight: 10 },
     ]);
-    await makePlan('INDIVIDUAL', `EMPLOYEE:${alphaEmployee1.employee.id}`, {
+    const D = await makePlan('INDIVIDUAL', `EMPLOYEE:${alphaEmployee1.employee.id}`, {
       companyId: alpha.id, employeeId: alphaEmployee1.employee.id, createdById: alphaManager.user.id, approvedById: alphaManager.user.id,
     }, [
       { key: 'deliveries', parent: A.deliveries, perspective: 'INTERNAL_PROCESS', name: 'Fuel deliveries completed', unit: 'deliveries', direction: 'HIGHER_IS_BETTER', yearTarget: 1200, weight: 30 },
       { key: 'onTime', parent: A.onTime, perspective: 'CUSTOMER', name: 'On-time deliveries', unit: '%', direction: 'HIGHER_IS_BETTER', aggregation: 'AVERAGE', yearTarget: 96, weight: 20 },
       { key: 'safety', parent: A.safety, perspective: 'INTERNAL_PROCESS', name: 'Safety incidents', unit: 'incidents', direction: 'ZERO', yearTarget: 0, weight: 20 },
     ]);
+
+    // Alpha's company numbers: entered by Selam, confirmed by the Head.
+    const selam = alphaManager.user.id;
+    await addActuals(A.revenue, [42, 38, 41, 39, 43, 40], headUser.id, selam);
+    await addActuals(A.onTime, [96, 95, 97, 96, 98, 97], headUser.id, selam);
+    await addActuals(A.deliveries, [210, 190, 205, 198, 212, 201], headUser.id, selam);
+    await addActuals(A.safety, [0, 0, 1, 0, 0, 0], headUser.id, selam);
+    await addActuals(A.training, [4, 2, 3, 5, 3, 4], headUser.id, selam);
+    // Dawit's numbers: entered by Dawit, confirmed by Selam. This month's deliveries still wait for Selam.
+    const dawit = alphaEmployee1.user.id;
+    await addActuals(D.deliveries, [104, 98, 110, 95, 102, 99], selam, dawit, 60);
+    await addActuals(D.onTime, [97, 94, 95, 98, 96, 97], selam, dawit);
+    await addActuals(D.safety, [0, 0, 1, 0, 0, 0], selam, dawit);
 
     // ---- 8. A sample goal in each company --------------------------------
     await tx.performanceGoal.create({

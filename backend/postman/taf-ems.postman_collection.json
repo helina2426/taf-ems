@@ -19390,6 +19390,1697 @@
       ]
     },
     {
+      "name": "Monthly actuals and progress (v2)",
+      "description": "Version 2, Module 13: entering the real monthly numbers, confirming them, traffic lights, comments, closing a month. Uses the demo plans of 2019 EFY (Dawit's plan and Alpha's company plan), so it needs the demo data — npm run test:api always starts from it. It leaves the data as it found it, so it can be run again.",
+      "item": [
+        {
+          "name": "Login - Employee Alpha (Dawit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - find his plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().data.items.find((x) => x.level === 'INDIVIDUAL' && x.status === 'ACTIVE');",
+                  "pm.test('Dawit has an active plan (demo data)', () => pm.expect(p).to.exist);",
+                  "pm.environment.set('dPlanId', p.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - read his progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data.progress;",
+                  "const months = d.periods.filter((p) => p.type === 'MONTH');",
+                  "const open = months.filter((m) => m.status === 'OPEN').pop();",
+                  "const upcoming = months.find((m) => m.status === 'UPCOMING');",
+                  "pm.environment.set('openMonthId', open.id);",
+                  "pm.environment.set('upcomingMonthId', upcoming ? upcoming.id : open.id);",
+                  "pm.environment.set('pyId13', d.plan.planYear.id);",
+                  "pm.environment.set('dDeliveries', d.kpis.find((k) => k.name === 'Fuel deliveries completed').id);",
+                  "pm.environment.set('dOnTime', d.kpis.find((k) => k.name === 'On-time deliveries').id);",
+                  "pm.test('He may enter numbers, not confirm them', () => { pm.expect(d.can.enter).to.eql(true); pm.expect(d.can.confirm).to.eql(false); });",
+                  "pm.test('Past months are confirmed (demo data)', () => pm.expect(d.kpis[0].months[0].state).to.eql('CONFIRMED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "progress"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - enter this month's deliveries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json().data.progress.kpis.find((k) => k.name === 'Fuel deliveries completed').months.find((x) => x.periodId === pm.environment.get('openMonthId'));",
+                  "pm.test('Saved, waiting for the Manager', () => { pm.expect(m.actual).to.eql(95); pm.expect(m.state).to.eql('ENTERED'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": 95,\n  \"comment\": \"One truck was in repair for a week.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "actual"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - a negative number (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": -5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "actual"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - a month that is not open yet (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{upcomingMonthId}}/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{upcomingMonthId}}",
+                "actual"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - confirm his own number (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - comment on the month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Saved as his (owner) comment', () => pm.expect(pm.response.json().data.progress.reviews.find((r) => r.periodId === pm.environment.get('openMonthId')).ownerComment).to.include('truck'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Deliveries were lower because of the truck repair.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/reviews/{{openMonthId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "reviews",
+                "{{openMonthId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee 2 Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee2.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another employee - read Dawit's progress (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "progress"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another employee - enter Dawit's number (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "actual"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Beta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.beta@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager Beta - read Dawit's progress (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "progress"
+              ]
+            },
+            "description": "Company wall."
+          }
+        },
+        {
+          "name": "Manager Beta - confirm Dawit's number (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - the plan list shows a number waiting",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().data.items.find((x) => x.id === pm.environment.get('dPlanId'));",
+                  "pm.test('At least 1 waiting for confirmation', () => pm.expect(p.waitingForConfirmation).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans?level=INDIVIDUAL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans"
+              ],
+              "query": [
+                {
+                  "key": "level",
+                  "value": "INDIVIDUAL"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - confirm Dawit's deliveries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json().data.progress.kpis.find((k) => k.name === 'Fuel deliveries completed').months.find((x) => x.periodId === pm.environment.get('openMonthId'));",
+                  "pm.test('CONFIRMED by the Manager', () => { pm.expect(m.state).to.eql('CONFIRMED'); pm.expect(m.confirmedBy).to.eql('manager.alpha@demo.local'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - confirm it again (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - enters Dawit's on-time % himself (confirmed at once)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json().data.progress.kpis.find((k) => k.name === 'On-time deliveries').months.find((x) => x.periodId === pm.environment.get('openMonthId'));",
+                  "pm.test('CONFIRMED at once (the Manager is the checker)', () => pm.expect(m.state).to.eql('CONFIRMED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": 97\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dOnTime}}/months/{{openMonthId}}/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dOnTime}}",
+                "months",
+                "{{openMonthId}}",
+                "actual"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - comment on the month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json().data.progress.reviews.find((x) => x.periodId === pm.environment.get('openMonthId'));",
+                  "pm.test('Both comments are there', () => { pm.expect(r.ownerComment).to.include('truck'); pm.expect(r.reviewerComment).to.include('fixed'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"Understood. The truck is fixed now.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/reviews/{{openMonthId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "reviews",
+                "{{openMonthId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - progress has quarter totals and traffic lights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data.progress;",
+                  "const q1 = d.periods.find((p) => p.type === 'QUARTER' && p.sequence === 1);",
+                  "const k = d.kpis.find((x) => x.name === 'Fuel deliveries completed');",
+                  "pm.test('Q1 deliveries: 104 + 98 + 110 = 312 of 300 → 104%, green', () => { const s = k.summary[q1.id]; pm.expect(s.actual).to.eql(312); pm.expect(s.achievement).to.eql(104); pm.expect(s.light).to.eql('GREEN'); });",
+                  "const safety = d.kpis.find((x) => x.name === 'Safety incidents');",
+                  "pm.test('Q1 safety: 1 incident → 50%, red', () => { const s = safety.summary[q1.id]; pm.expect(s.achievement).to.eql(50); pm.expect(s.light).to.eql('RED'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "progress"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee Alpha (Dawit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - correct his confirmed number (it must be checked again)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json().data.progress.kpis.find((k) => k.name === 'Fuel deliveries completed').months.find((x) => x.periodId === pm.environment.get('openMonthId'));",
+                  "pm.test('Back to ENTERED', () => pm.expect(m.state).to.eql('ENTERED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": 96,\n  \"comment\": \"Corrected: one late delivery counted.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "actual"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - close the month while a number waits (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Says numbers are waiting', () => pm.expect(pm.response.json().error.message).to.include('waiting for confirmation'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plan-years/{{pyId13}}/months/{{openMonthId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plan-years",
+                "{{pyId13}}",
+                "months",
+                "{{openMonthId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - confirm every waiting number of Dawit's month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Nothing waiting any more', () => pm.expect(pm.response.json().data.progress.waitingForConfirmation).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/months/{{openMonthId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "months",
+                "{{openMonthId}}",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - confirm all again (expect 409: nothing waiting)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/months/{{openMonthId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "months",
+                "{{openMonthId}}",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - find Alpha's company plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().data.items.find((x) => x.company && x.company.name.includes('Alpha') && x.status === 'ACTIVE');",
+                  "pm.environment.set('aPlanId', p.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans?level=COMPANY",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans"
+              ],
+              "query": [
+                {
+                  "key": "level",
+                  "value": "COMPANY"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - read Alpha's progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('aRevenue', pm.response.json().data.progress.kpis.find((k) => k.name === 'Alpha revenue').id);",
+                  "pm.test('The Head confirms company numbers', () => pm.expect(pm.response.json().data.progress.can.confirm).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{aPlanId}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{aPlanId}}",
+                "progress"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - enter Alpha's revenue for the month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json().data.progress.kpis.find((k) => k.name === 'Alpha revenue').months.find((x) => x.periodId === pm.environment.get('openMonthId'));",
+                  "pm.test('Waiting for the Holding', () => pm.expect(m.state).to.eql('ENTERED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": 41.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{aRevenue}}/months/{{openMonthId}}/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{aRevenue}}",
+                "months",
+                "{{openMonthId}}",
+                "actual"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - confirm his own company number (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{aRevenue}}/months/{{openMonthId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{aRevenue}}",
+                "months",
+                "{{openMonthId}}",
+                "confirm"
+              ]
+            },
+            "description": "His own score depends on the company numbers, so the Holding checks them."
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - confirm Alpha's revenue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{aRevenue}}/months/{{openMonthId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{aRevenue}}",
+                "months",
+                "{{openMonthId}}",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - close the month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plan-years/{{pyId13}}/months/{{openMonthId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plan-years",
+                "{{pyId13}}",
+                "months",
+                "{{openMonthId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee Alpha (Dawit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - change a number of a closed month (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kpis/{{dDeliveries}}/months/{{openMonthId}}/actual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kpis",
+                "{{dDeliveries}}",
+                "months",
+                "{{openMonthId}}",
+                "actual"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - reopen the month (leave it as it was)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/plan-years/{{pyId13}}/months/{{openMonthId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plan-years",
+                "{{pyId13}}",
+                "months",
+                "{{openMonthId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - delete a plan that has numbers (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Because numbers were entered', () => pm.expect(pm.response.json().error.message).to.include('Actual numbers'))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Audit log - confirmations are recorded",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('At least one ACTUAL_CONFIRMED', () => pm.expect(pm.response.json().data.items.length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs?action=ACTUAL_CONFIRMED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "ACTUAL_CONFIRMED"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Security",
       "item": [
         {

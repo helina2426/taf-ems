@@ -21,6 +21,7 @@ import { toDateOnly } from '../../shared/validation.js';
 import { EDITABLE, allowedActions, assertCanView, canSeeLinked, isApprover, isWriter } from './plan.access.js';
 import { PERSPECTIVES, cascadeWarning, checkPlanReady, resultsShareFor } from './plan.rules.js';
 import * as repository from './plan.repository.js';
+import { countActualsInPlan, waitingPerPlan } from '../progress/progress.service.js';
 
 const RULE_FIELDS = ['employeeResultsShare', 'managerResultsShare', 'minKpis', 'maxKpis', 'minKpiWeight', 'maxKpiWeight'];
 
@@ -97,7 +98,9 @@ export async function listPlans(query, user) {
   }
 
   const plans = await repository.findPlans(where);
-  return { items: plans.map(repository.toPlanSummary) };
+  const waiting = await waitingPerPlan(plans.map((p) => p.id));
+  // waitingForConfirmation: actual numbers entered but not confirmed yet (Module 13).
+  return { items: plans.map((p) => ({ ...repository.toPlanSummary(p), waitingForConfirmation: waiting[p.id] ?? 0 })) };
 }
 
 export async function getPlan(id, user) {
@@ -283,6 +286,9 @@ export async function deletePlan(id, user) {
     }
     if ((await repository.countLinkedKpis(id, tx)) > 0) {
       throw AppError.conflict('KPIs of the level below are linked to this plan. Delete those plans first.');
+    }
+    if ((await countActualsInPlan(id, tx)) > 0) {
+      throw AppError.conflict('Actual numbers have already been entered in this plan, so it can no longer be deleted.');
     }
     await repository.deletePlan(id, tx);
     await recordAudit(

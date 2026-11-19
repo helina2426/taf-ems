@@ -14,8 +14,9 @@
 //   • The rules of a year (70/30 split, 120% cap, …) can only be changed while it is PLANNING.
 //   • Activating opens the year, and every half, quarter and month that has already started.
 //     The other months are opened by a Holding user when their time comes.
-//   • A CLOSED month is frozen (later modules: its actual numbers cannot change). It can be
-//     reopened for a late correction, and every change is written to the audit log.
+//   • A CLOSED month is frozen: its actual numbers cannot change (Module 13). It cannot be closed
+//     while numbers are waiting for confirmation. It can be reopened for a late correction, and
+//     every change is written to the audit log.
 //   • "Back to planning" puts every period back to UPCOMING. It is not possible once plans have
 //     been written in the year (Module 12).
 //   • Only a PLANNING year without plans can be deleted.
@@ -28,6 +29,7 @@ import { recordAudit } from '../../shared/auditLog.js';
 import { buildPlanYear } from '../../shared/planYear.js';
 import { getHoldingOrFail } from '../settings/settings.service.js';
 import * as repository from './planYear.repository.js';
+import { countWaitingInMonth } from '../progress/progress.service.js';
 import { DEFAULT_RULES, checkRules } from './planYear.rules.js';
 import { RULE_NAMES } from './planYear.validation.js';
 
@@ -230,6 +232,13 @@ export async function setMonthStatus(id, periodId, { status }, user) {
     if (month.status === status) throw AppError.conflict(`The month is already ${status}.`);
     if (!MONTH_CHANGES[month.status].includes(status)) {
       throw AppError.conflict(`A month cannot go from ${month.status} to ${status}.`);
+    }
+    // Module 13: a month is frozen when it closes, so every number must be checked first.
+    if (status === 'CLOSED') {
+      const waiting = await countWaitingInMonth(periodId, tx);
+      if (waiting > 0) {
+        throw AppError.conflict(`${waiting} actual number(s) of this month are still waiting for confirmation. Confirm them before closing the month.`);
+      }
     }
     if ((await repository.changePeriodStatus(periodId, month.status, status, tx)) === 0) {
       throw AppError.conflict('The month was changed by someone else. Reload and try again.');

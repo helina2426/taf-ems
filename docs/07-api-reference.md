@@ -226,6 +226,27 @@ Three levels, in the hierarchy order: **HOLDING** (the group) → **COMPANY** (=
 
 "Complete" = Holding: at least 1 KPI. Company and employee plans: between `minKpis` and `maxKpis` KPIs, each weighing `minKpiWeight`–`maxKpiWeight` points, all linked to the level above, total = `managerResultsShare` (company) or `employeeResultsShare` (employee); a company plan also needs one KPI in each of the 4 perspectives.
 
+### Monthly actuals and progress (version 2, Module 13)
+Only for ACTIVE plans, while the plan year is ACTIVE and the month is OPEN. Only **confirmed** numbers count.
+
+| Plan | Enters the number | Confirms it |
+|---|---|---|
+| Employee plan | the employee, or the Manager | the Manager, or a Holding approver |
+| Company plan | the Manager, or a Holding approver | a Holding approver |
+| Holding plan | a Holding user | (counts at once) |
+
+When the person entering may also confirm, the number is confirmed at once. A changed number must be confirmed again.
+
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| GET | `/plans/:id/progress` | Whoever may see the plan | Each KPI's 12 months (`target`, `actual`, `state`: EMPTY / ENTERED / CONFIRMED) and a `summary` per quarter, half and year: `target`, `targetSoFar`, `actual`, `achievement` (%), `light` (GREEN ≥ 100%, YELLOW 85–99%, RED < 85%); the comments; `can` |
+| PUT | `/kpis/:id/months/:periodId/actual` | See the table | `actual` (0 or more), `comment` (optional) |
+| POST | `/kpis/:id/months/:periodId/confirm` | See the table | 409 if already confirmed or nothing entered |
+| POST | `/plans/:id/months/:periodId/confirm` | See the table | Confirms every waiting number of that month |
+| PUT | `/plans/:id/reviews/:periodId` | The owner (employee / Manager) or the reviewer (Manager / Holding) | `comment`. A month or a quarter that has started. No score |
+
+Also since Module 13: a month cannot be **closed** while numbers wait for confirmation, a plan with actual numbers cannot be **deleted**, and `GET /plans` returns `waitingForConfirmation` for each plan.
+
 ### KPIs — `/kpis` (version 2)
 Only the writer of the plan, only while the plan is DRAFT or RETURNED.
 

@@ -191,6 +191,9 @@ model User {
   cyclesCreated        PerformanceCycle[]
   plansCreated         Plan[]               @relation("PlanCreatedBy")
   plansApproved        Plan[]               @relation("PlanApprovedBy")
+  actualsEntered       KpiMonth[]           @relation("ActualEnteredBy")
+  actualsConfirmed     KpiMonth[]           @relation("ActualConfirmedBy")
+  progressReviews      ProgressReview[]
 }
 
 model Employee {
@@ -347,6 +350,7 @@ model EvaluationPeriod {
   selfAssessments SelfAssessment[]
   evaluations     Evaluation[]
   kpiMonths       KpiMonth[]
+  progressReviews ProgressReview[]
 
   @@unique([cycleId, type, sequence])
   @@index([parentId])
@@ -484,6 +488,7 @@ model Plan {
   createdBy  User             @relation("PlanCreatedBy", fields: [createdById], references: [id])
   approvedBy User?            @relation("PlanApprovedBy", fields: [approvedById], references: [id])
   kpis       Kpi[]
+  reviews    ProgressReview[]
 
   @@unique([cycleId, scope])
   @@index([companyId])
@@ -517,19 +522,50 @@ model Kpi {
   @@index([parentKpiId])
 }
 
-// For one KPI and one month: the target (Module 13 adds the actual number).
+// For one KPI and one month: the target and, from Module 13, the actual number.
 model KpiMonth {
-  id        String   @id @default(uuid()) @db.Uuid
-  kpiId     String   @db.Uuid
-  periodId  String   @db.Uuid // a MONTH period of the plan year
-  target    Decimal  @db.Decimal(14, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(uuid()) @db.Uuid
+  kpiId         String    @db.Uuid
+  periodId      String    @db.Uuid // a MONTH period of the plan year
+  target        Decimal   @db.Decimal(14, 2)
+  actual        Decimal?  @db.Decimal(14, 2) // empty until someone enters it
+  comment       String? // why the number is what it is (optional)
+  enteredById   String?   @db.Uuid
+  enteredAt     DateTime?
+  confirmedById String?   @db.Uuid
+  confirmedAt   DateTime? // only CONFIRMED actual numbers count in progress and scores
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  kpi    Kpi              @relation(fields: [kpiId], references: [id], onDelete: Cascade)
-  period EvaluationPeriod @relation(fields: [periodId], references: [id])
+  kpi         Kpi              @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  period      EvaluationPeriod @relation(fields: [periodId], references: [id])
+  enteredBy   User?            @relation("ActualEnteredBy", fields: [enteredById], references: [id])
+  confirmedBy User?            @relation("ActualConfirmedBy", fields: [confirmedById], references: [id])
 
   @@unique([kpiId, periodId])
+  @@index([periodId])
+}
+
+// The comments of one plan for one month or quarter (Module 13). No score.
+// owner    = the person whose plan it is (the employee, or the Manager for a company plan)
+// reviewer = the person who checks it (the Manager, or the Holding for a company plan)
+model ProgressReview {
+  id                String    @id @default(uuid()) @db.Uuid
+  planId            String    @db.Uuid
+  periodId          String    @db.Uuid // a MONTH or QUARTER of the plan year
+  ownerComment      String?
+  ownerCommentAt    DateTime?
+  reviewerComment   String?
+  reviewerId        String?   @db.Uuid
+  reviewerCommentAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  plan     Plan             @relation(fields: [planId], references: [id], onDelete: Cascade)
+  period   EvaluationPeriod @relation(fields: [periodId], references: [id])
+  reviewer User?            @relation(fields: [reviewerId], references: [id])
+
+  @@unique([planId, periodId])
   @@index([periodId])
 }
 

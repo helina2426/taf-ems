@@ -15,6 +15,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useSubmit } from '../../hooks/useSubmit.js';
 import { fieldError, formatDate } from '../../utils/format.js';
 import { shortPeriodName } from '../../utils/planYears.js';
+import { ProgressSection } from './ProgressSection.jsx';
 import {
   AGGREGATION,
   AGGREGATIONS,
@@ -135,6 +136,9 @@ export function PlanView({ plan, reload, backTo }) {
       )}
 
       <KpiTable plan={plan} onEdit={(kpi) => setDialog({ type: 'kpi', kpi })} onMonths={(kpi) => setDialog({ type: 'months', kpi })} onDelete={(kpi) => setDialog({ type: 'deleteKpi', kpi })} />
+
+      {/* Module 13: the real numbers, month by month, once the plan is active. */}
+      {plan.status === 'ACTIVE' && <ProgressSection planId={plan.id} />}
 
       {dialog?.type === 'kpi' && <KpiForm plan={plan} kpi={dialog.kpi} onClose={close} onSaved={done} />}
       {dialog?.type === 'months' && <MonthsForm plan={plan} kpi={dialog.kpi} onClose={close} onSaved={done} />}

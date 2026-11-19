@@ -1,4 +1,6 @@
-// The menu of each role. Pages marked "soon" are built in the next steps.
+// The menu of each role.
+// Version 2 (Module 13): the old "Goals" pages are hidden — KPIs with monthly numbers replace them.
+// Their data is kept in the database.
 
 export const NAVIGATION = {
   HOLDING: [
@@ -19,7 +21,6 @@ export const NAVIGATION = {
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/employees', label: 'My team' },
     { to: '/plans', label: 'Plans' },
-    { to: '/goals', label: 'Goals' },
     { to: '/self-assessments', label: 'Self-assessments' },
     { to: '/evaluations', label: 'Evaluations' },
     { to: '/reports', label: 'Reports' },
@@ -29,7 +30,6 @@ export const NAVIGATION = {
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/profile', label: 'My profile' },
     { to: '/my-plan', label: 'My plan' },
-    { to: '/goals', label: 'My goals' },
     { to: '/self-assessments', label: 'Self-assessment' },
     { to: '/my-evaluations', label: 'My evaluations' },
   ],

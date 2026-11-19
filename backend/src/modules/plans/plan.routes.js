@@ -7,6 +7,8 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { validate } from '../../middleware/validate.js';
 import { idParamSchema } from '../../shared/validation.js';
 import * as controller from './plan.controller.js';
+import * as progress from '../progress/progress.controller.js';
+import { actualSchema, commentSchema, kpiMonthParamsSchema, planPeriodParamsSchema } from '../progress/progress.validation.js';
 import {
   acknowledgePlanSchema,
   createKpiSchema,
@@ -30,6 +32,10 @@ planRoutes.post('/:id/return', withId, validate(returnPlanSchema), controller.re
 planRoutes.post('/:id/activate', withId, controller.activate);
 planRoutes.post('/:id/acknowledge', withId, validate(acknowledgePlanSchema), controller.acknowledge);
 planRoutes.delete('/:id', withId, controller.remove);
+// Module 13: monthly actual numbers and progress.
+planRoutes.get('/:id/progress', withId, progress.get);
+planRoutes.post('/:id/months/:periodId/confirm', validate(planPeriodParamsSchema, 'params'), progress.confirmMonth);
+planRoutes.put('/:id/reviews/:periodId', validate(planPeriodParamsSchema, 'params'), validate(commentSchema), progress.saveComment);
 
 export const kpiRoutes = Router();
 kpiRoutes.use(authenticate());
@@ -37,3 +43,5 @@ kpiRoutes.post('/', validate(createKpiSchema), controller.createKpi);
 kpiRoutes.patch('/:id', withId, validate(updateKpiSchema), controller.updateKpi);
 kpiRoutes.delete('/:id', withId, controller.deleteKpi);
 kpiRoutes.put('/:id/months', withId, validate(monthTargetsSchema), controller.setMonthTargets);
+kpiRoutes.put('/:id/months/:periodId/actual', validate(kpiMonthParamsSchema, 'params'), validate(actualSchema), progress.enterActual);
+kpiRoutes.post('/:id/months/:periodId/confirm', validate(kpiMonthParamsSchema, 'params'), progress.confirmActual);

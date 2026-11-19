@@ -137,7 +137,10 @@ function CompaniesTable({ plans, planYear }) {
               return (
                 <tr key={company.id}>
                   <td className="strong">{company.name}</td>
-                  <td>{plan ? <Badge tone={PLAN_STATUS[plan.status].tone}>{PLAN_STATUS[plan.status].label}</Badge> : <span className="muted small">Not written yet</span>}</td>
+                  <td>
+                    {plan ? <Badge tone={PLAN_STATUS[plan.status].tone}>{PLAN_STATUS[plan.status].label}</Badge> : <span className="muted small">Not written yet</span>}
+                    {plan?.waitingForConfirmation > 0 && <div className="small">{plan.waitingForConfirmation} number(s) to confirm</div>}
+                  </td>
                   <td className="num">{plan?.kpiCount ?? '—'}</td>
                   <td className="num">{plan ? `${plan.weightTotal} / ${planYear.rules.managerResultsShare}` : '—'}</td>
                   <td className="num">
@@ -247,7 +250,10 @@ function ManagerSection({ planYear, plans, onCreated }) {
                       <div className="strong">{fullName(person)}</div>
                       <div className="muted small">{person.jobTitle ?? ''}</div>
                     </td>
-                    <td>{plan ? <Badge tone={PLAN_STATUS[plan.status].tone}>{PLAN_STATUS[plan.status].label}</Badge> : <span className="muted small">No plan yet</span>}</td>
+                    <td>
+                      {plan ? <Badge tone={PLAN_STATUS[plan.status].tone}>{PLAN_STATUS[plan.status].label}</Badge> : <span className="muted small">No plan yet</span>}
+                      {plan?.waitingForConfirmation > 0 && <div className="small">{plan.waitingForConfirmation} number(s) to confirm</div>}
+                    </td>
                     <td className="num">{plan?.kpiCount ?? '—'}</td>
                     <td className="num">{plan ? `${plan.weightTotal} / ${planYear.rules.employeeResultsShare}` : '—'}</td>
                     <td className="small">{plan?.acknowledgedAt ? 'Yes' : '—'}</td>

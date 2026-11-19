@@ -207,6 +207,34 @@ A plan year ("2019 EFY" = Hamle 1, 2018 → Sene 30, 2019, or "2026 (GC)") has 1
 | DELETE | `/plan-years/:id` | H | Only while PLANNING (the 19 periods are deleted with it) |
 
 The old `/evaluation-periods` endpoints list and change version-1 periods only; the periods of a plan year answer 409 there.
+Since Module 12, a plan year with plans can no longer go back to PLANNING or be deleted.
+
+### Plans — `/plans` (version 2)
+Three levels, in the hierarchy order: **HOLDING** (the group) → **COMPANY** (= the Manager's plan) → **INDIVIDUAL** (one employee). One plan per level per plan year (one per company, one per employee). Every reply to a change returns the whole plan, with `readiness` (what is still missing) and `can` (the buttons this user may use).
+
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| GET | `/plans` | All (scoped) | `planYearId`, `level`, `companyId`, `status`. H: all · M: the Holding plan + own company · E: own ACTIVE plan only |
+| GET | `/plans/:id` | Same scope | KPIs with their 12 monthly targets, links up (`parentKpi`) and down (`linkedKpis`, not shown to Managers on the Holding plan) |
+| POST | `/plans` | H (HOLDING) · M (COMPANY, own company) · M (INDIVIDUAL, `employeeId` of own team) | `planYearId`, `level`. Not for a Manager himself, not in a CLOSED year. 409 if it exists |
+| POST | `/plans/:id/submit` | M (own company plan) | DRAFT/RETURNED → SUBMITTED. Needs the Holding plan ACTIVE and a complete plan |
+| POST | `/plans/:id/approve` | H approver | SUBMITTED → ACTIVE (company plans) |
+| POST | `/plans/:id/return` | H approver | `comment` (10+ characters). SUBMITTED → RETURNED |
+| POST | `/plans/:id/activate` | H approver (Holding plan) · M (employee plan, needs the company plan ACTIVE) | DRAFT/RETURNED → ACTIVE. Needs a complete plan |
+| POST | `/plans/:id/acknowledge` | E (own ACTIVE plan) | `comment` (optional). Once |
+| DELETE | `/plans/:id` | The writer while DRAFT/RETURNED · primary H while ACTIVE | Not while KPIs of the level below are linked to it |
+
+"Complete" = Holding: at least 1 KPI. Company and employee plans: between `minKpis` and `maxKpis` KPIs, each weighing `minKpiWeight`–`maxKpiWeight` points, all linked to the level above, total = `managerResultsShare` (company) or `employeeResultsShare` (employee); a company plan also needs one KPI in each of the 4 perspectives.
+
+### KPIs — `/kpis` (version 2)
+Only the writer of the plan, only while the plan is DRAFT or RETURNED.
+
+| Method | Path | Body / notes |
+|---|---|---|
+| POST | `/kpis` | `planId`, `perspective` (FINANCIAL, CUSTOMER, INTERNAL_PROCESS, LEARNING_GROWTH), `name`, `description`, `unit`, `direction` (HIGHER_IS_BETTER, LOWER_IS_BETTER, EXACT, ZERO), `aggregation` (SUM, AVERAGE, LAST), `baseline`, `yearTarget`, `weight` (not on the Holding plan), `parentKpiId` (company → a Holding KPI; employee → a KPI of his company's plan). The 12 monthly targets are created automatically |
+| PATCH | `/kpis/:id` | Any of the fields above. A new year target, direction or aggregation splits the months again |
+| DELETE | `/kpis/:id` | Not while other KPIs are linked to it |
+| PUT | `/kpis/:id/months` | `targets`: 12 numbers. SUM: they add up to the year target · AVERAGE: their average is the year target · LAST: the 12th is the year target |
 
 ### Audit log — `/audit-logs`
 | Method | Path | Who | Notes |

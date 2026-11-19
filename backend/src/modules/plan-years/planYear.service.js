@@ -16,8 +16,9 @@
 //     The other months are opened by a Holding user when their time comes.
 //   • A CLOSED month is frozen (later modules: its actual numbers cannot change). It can be
 //     reopened for a late correction, and every change is written to the audit log.
-//   • "Back to planning" puts every period back to UPCOMING. (Module 12 will add: not possible
-//     once plans have been written in the year.)
+//   • "Back to planning" puts every period back to UPCOMING. It is not possible once plans have
+//     been written in the year (Module 12).
+//   • Only a PLANNING year without plans can be deleted.
 //   • Only a PLANNING year can be deleted.
 
 import { randomUUID } from 'node:crypto';
@@ -41,6 +42,10 @@ export function todayInAddis(now = new Date()) {
 function assertRules(rules) {
   const problems = checkRules(rules);
   if (problems.length > 0) throw AppError.badRequest('Some fields are missing or invalid.', problems);
+}
+
+function countPlans(cycleId, db) {
+  return db.plan.count({ where: { cycleId } });
 }
 
 async function getPlanYearOrFail(id, db) {
@@ -174,6 +179,10 @@ export async function setPlanYearStatus(id, { status }, user) {
       throw AppError.conflict(`A plan year cannot go from ${before.status} to ${status}.`);
     }
 
+    if (status === 'PLANNING' && (await countPlans(id, tx)) > 0) {
+      throw AppError.conflict('The plan year cannot go back to planning: plans have already been written in it.');
+    }
+
     const reopening = before.status === 'CLOSED' && status === 'ACTIVE';
     if (reopening && !user.isPrimaryHoldingUser) {
       throw AppError.forbidden('Only the primary Holding user can reopen a closed plan year.');
@@ -246,6 +255,9 @@ export async function deletePlanYear(id, user) {
     const cycle = await getPlanYearOrFail(id, tx);
     if (cycle.status !== 'PLANNING') {
       throw AppError.conflict('Only a plan year that is still PLANNING can be deleted.');
+    }
+    if ((await countPlans(id, tx)) > 0) {
+      throw AppError.conflict('This plan year already has plans. Delete the plans first.');
     }
     await repository.remove(id, tx);
     await recordAudit(

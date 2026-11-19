@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import env from '../src/config/env.js';
 import prisma from '../src/config/prisma.js';
 import { buildPlanYear } from '../src/shared/planYear.js';
+import { splitYearTarget } from '../src/modules/plans/plan.rules.js';
 import { randomUUID } from 'node:crypto';
 
 // One shared password for every sample account (development only).
@@ -203,6 +204,47 @@ async function main() {
         createdById: headUser.id,
       })),
     });
+
+    // ---- 7c. Version 2: demo plans for 2019 EFY (Module 12) ----------------
+    // Holding plan → Alpha's company plan (Selam) → Dawit's plan, all ACTIVE and linked.
+    // Beta, and Alpha's second employee, have no plan yet: you can practise on them.
+    const months = await tx.evaluationPeriod.findMany({ where: { cycleId: cycle.id, type: 'MONTH' }, orderBy: { sequence: 'asc' } });
+    const now = new Date();
+    async function makePlan(level, scope, extra, kpis) {
+      const plan = await tx.plan.create({
+        data: { cycleId: cycle.id, level, scope, status: 'ACTIVE', createdById: headUser.id, approvedById: headUser.id, approvedAt: now, ...extra },
+      });
+      const created = {};
+      for (const [index, kpi] of kpis.entries()) {
+        const { key, parent, ...data } = kpi;
+        const row = await tx.kpi.create({ data: { ...data, aggregation: data.aggregation ?? 'SUM', planId: plan.id, parentKpiId: parent ?? null, sortOrder: index } });
+        const targets = splitYearTarget(data.yearTarget, data.aggregation ?? 'SUM', data.direction);
+        await tx.kpiMonth.createMany({ data: months.map((m, i) => ({ kpiId: row.id, periodId: m.id, target: targets[i] })) });
+        created[key] = row.id;
+      }
+      return created;
+    }
+    const H = await makePlan('HOLDING', 'HOLDING', {}, [
+      { key: 'revenue', perspective: 'FINANCIAL', name: 'Group revenue', unit: 'million ETB', direction: 'HIGHER_IS_BETTER', yearTarget: 1200 },
+      { key: 'onTime', perspective: 'CUSTOMER', name: 'On-time deliveries', unit: '%', direction: 'HIGHER_IS_BETTER', aggregation: 'AVERAGE', yearTarget: 95 },
+      { key: 'deliveries', perspective: 'INTERNAL_PROCESS', name: 'Fuel deliveries completed', unit: 'deliveries', direction: 'HIGHER_IS_BETTER', yearTarget: 5000 },
+      { key: 'safety', perspective: 'INTERNAL_PROCESS', name: 'Lost-time safety incidents', unit: 'incidents', direction: 'ZERO', yearTarget: 0 },
+      { key: 'training', perspective: 'LEARNING_GROWTH', name: 'Training hours per employee', unit: 'hours', direction: 'HIGHER_IS_BETTER', yearTarget: 40 },
+    ]);
+    const A = await makePlan('COMPANY', `COMPANY:${alpha.id}`, { companyId: alpha.id, createdById: alphaManager.user.id, submittedAt: now }, [
+      { key: 'revenue', parent: H.revenue, perspective: 'FINANCIAL', name: 'Alpha revenue', unit: 'million ETB', direction: 'HIGHER_IS_BETTER', yearTarget: 480, weight: 20 },
+      { key: 'onTime', parent: H.onTime, perspective: 'CUSTOMER', name: 'On-time deliveries', unit: '%', direction: 'HIGHER_IS_BETTER', aggregation: 'AVERAGE', yearTarget: 96, weight: 20 },
+      { key: 'deliveries', parent: H.deliveries, perspective: 'INTERNAL_PROCESS', name: 'Fuel deliveries completed', unit: 'deliveries', direction: 'HIGHER_IS_BETTER', yearTarget: 2400, weight: 20 },
+      { key: 'safety', parent: H.safety, perspective: 'INTERNAL_PROCESS', name: 'Safety incidents', unit: 'incidents', direction: 'ZERO', yearTarget: 0, weight: 10 },
+      { key: 'training', parent: H.training, perspective: 'LEARNING_GROWTH', name: 'Training hours per employee', unit: 'hours', direction: 'HIGHER_IS_BETTER', yearTarget: 40, weight: 10 },
+    ]);
+    await makePlan('INDIVIDUAL', `EMPLOYEE:${alphaEmployee1.employee.id}`, {
+      companyId: alpha.id, employeeId: alphaEmployee1.employee.id, createdById: alphaManager.user.id, approvedById: alphaManager.user.id,
+    }, [
+      { key: 'deliveries', parent: A.deliveries, perspective: 'INTERNAL_PROCESS', name: 'Fuel deliveries completed', unit: 'deliveries', direction: 'HIGHER_IS_BETTER', yearTarget: 1200, weight: 30 },
+      { key: 'onTime', parent: A.onTime, perspective: 'CUSTOMER', name: 'On-time deliveries', unit: '%', direction: 'HIGHER_IS_BETTER', aggregation: 'AVERAGE', yearTarget: 96, weight: 20 },
+      { key: 'safety', parent: A.safety, perspective: 'INTERNAL_PROCESS', name: 'Safety incidents', unit: 'incidents', direction: 'ZERO', yearTarget: 0, weight: 20 },
+    ]);
 
     // ---- 8. A sample goal in each company --------------------------------
     await tx.performanceGoal.create({

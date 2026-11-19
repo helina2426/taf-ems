@@ -1189,6 +1189,46 @@ input[type='range'] {
   }
 }
 
+/* ---------- Version 2: plans and KPIs (Module 12) ---------- */
+
+.page-actions select {
+  width: auto;
+}
+
+.page > .stat-grid {
+  margin: 4px 0 16px;
+}
+
+.plan-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kpi-table td {
+  vertical-align: top;
+}
+
+.months-table input {
+  width: 120px;
+  text-align: right;
+}
+
+.months-table tfoot td {
+  border-top: 2px solid var(--color-border);
+}
+
+.page-top-select {
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 32px 0;
+}
+
+.page-top-select select {
+  width: auto;
+}
+
 /* Very small phones: the calendar switch needs the room of the name in the top bar. */
 @media (max-width: 480px) {
   .topbar-user {

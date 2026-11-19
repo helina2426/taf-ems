@@ -25,6 +25,7 @@ import reportRoutes from './modules/reports/report.routes.js';
 import auditLogRoutes from './modules/audit-logs/auditLog.routes.js';
 import settingsRoutes from './modules/settings/settings.routes.js';
 import planYearRoutes from './modules/plan-years/planYear.routes.js';
+import { kpiRoutes, planRoutes } from './modules/plans/plan.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -86,6 +87,8 @@ app.use('/api/audit-logs', auditLogRoutes);
 // Version 2: plan-based evaluation.
 app.use('/api/settings', settingsRoutes);
 app.use('/api/plan-years', planYearRoutes);
+app.use('/api/plans', planRoutes);
+app.use('/api/kpis', kpiRoutes);
 
 // Production: also serve the built React app (see SERVE_FRONTEND).
 if (env.serveFrontend) {

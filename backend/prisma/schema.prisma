@@ -86,6 +86,44 @@ enum PeriodType {
   MONTH
 }
 
+// ---- Version 2: plans and KPIs (Module 12) ----
+
+enum PlanLevel {
+  HOLDING
+  COMPANY
+  INDIVIDUAL
+}
+
+enum PlanStatus {
+  DRAFT
+  SUBMITTED
+  RETURNED
+  ACTIVE
+}
+
+// The four Balanced Scorecard perspectives.
+enum Perspective {
+  FINANCIAL
+  CUSTOMER
+  INTERNAL_PROCESS
+  LEARNING_GROWTH
+}
+
+// Which result is good.
+enum KpiDirection {
+  HIGHER_IS_BETTER
+  LOWER_IS_BETTER
+  EXACT
+  ZERO
+}
+
+// How the months add up to a quarter, a half and the year.
+enum KpiAggregation {
+  SUM
+  AVERAGE
+  LAST
+}
+
 // ----------------------------------------------------------------------------
 // ORGANIZATION
 // ----------------------------------------------------------------------------
@@ -117,6 +155,7 @@ model Company {
   employees          Employee[]
   managerAssignments ManagerAssignment[]
   evaluations        Evaluation[]
+  plans              Plan[]
 
   @@index([holdingId])
 }
@@ -150,6 +189,8 @@ model User {
   reviews              EvaluationReview[]
   auditLogs            AuditLog[]
   cyclesCreated        PerformanceCycle[]
+  plansCreated         Plan[]               @relation("PlanCreatedBy")
+  plansApproved        Plan[]               @relation("PlanApprovedBy")
 }
 
 model Employee {
@@ -174,6 +215,7 @@ model Employee {
   goals           PerformanceGoal[]
   selfAssessments SelfAssessment[]
   evaluations     Evaluation[]
+  plans           Plan[]
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])
@@ -277,6 +319,7 @@ model PerformanceCycle {
   holding   Holding            @relation(fields: [holdingId], references: [id])
   createdBy User               @relation(fields: [createdById], references: [id])
   periods   EvaluationPeriod[]
+  plans     Plan[]
 
   @@index([holdingId])
   @@index([startDate])
@@ -303,6 +346,7 @@ model EvaluationPeriod {
   goals           PerformanceGoal[]
   selfAssessments SelfAssessment[]
   evaluations     Evaluation[]
+  kpiMonths       KpiMonth[]
 
   @@unique([cycleId, type, sequence])
   @@index([parentId])
@@ -406,6 +450,87 @@ model EvaluationReview {
   reviewer   User       @relation(fields: [reviewerId], references: [id])
 
   @@index([evaluationId])
+}
+
+// ----------------------------------------------------------------------------
+// PLANS AND KPIs (version 2, Module 12)
+// ----------------------------------------------------------------------------
+
+// One plan: the Holding's plan, a company's plan (= its Manager's plan), or one employee's plan.
+model Plan {
+  id                 String     @id @default(uuid()) @db.Uuid
+  cycleId            String     @db.Uuid
+  level              PlanLevel
+  // "HOLDING", "COMPANY:<companyId>" or "EMPLOYEE:<employeeId>".
+  // With (cycleId, scope) unique, each plan year has ONE Holding plan, one plan per company
+  // and one plan per employee.
+  scope              String
+  companyId          String?    @db.Uuid // COMPANY and INDIVIDUAL plans
+  employeeId         String?    @db.Uuid // INDIVIDUAL plans only
+  status             PlanStatus @default(DRAFT)
+  createdById        String     @db.Uuid
+  submittedAt        DateTime?
+  approvedById       String?    @db.Uuid // who approved (company plan) or activated it
+  approvedAt         DateTime?
+  returnComment      String?
+  acknowledgedAt     DateTime? // INDIVIDUAL: the employee has read it
+  acknowledgeComment String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  cycle      PerformanceCycle @relation(fields: [cycleId], references: [id])
+  company    Company?         @relation(fields: [companyId], references: [id])
+  employee   Employee?        @relation(fields: [employeeId], references: [id])
+  createdBy  User             @relation("PlanCreatedBy", fields: [createdById], references: [id])
+  approvedBy User?            @relation("PlanApprovedBy", fields: [approvedById], references: [id])
+  kpis       Kpi[]
+
+  @@unique([cycleId, scope])
+  @@index([companyId])
+  @@index([employeeId])
+}
+
+// One measured target inside a plan.
+model Kpi {
+  id          String         @id @default(uuid()) @db.Uuid
+  planId      String         @db.Uuid
+  parentKpiId String?        @db.Uuid // the KPI one level up that this one helps to reach
+  perspective Perspective
+  name        String
+  description String?
+  unit        String // "deliveries", "%", "litres", "ETB"
+  direction   KpiDirection
+  aggregation KpiAggregation @default(SUM)
+  baseline    Decimal?       @db.Decimal(14, 2) // last year's value, for comparison
+  yearTarget  Decimal        @db.Decimal(14, 2)
+  weight      Int? // points out of 100; empty on the Holding plan
+  sortOrder   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  plan      Plan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  parentKpi Kpi?       @relation("KpiCascade", fields: [parentKpiId], references: [id])
+  childKpis Kpi[]      @relation("KpiCascade")
+  months    KpiMonth[]
+
+  @@index([planId])
+  @@index([parentKpiId])
+}
+
+// For one KPI and one month: the target (Module 13 adds the actual number).
+model KpiMonth {
+  id        String   @id @default(uuid()) @db.Uuid
+  kpiId     String   @db.Uuid
+  periodId  String   @db.Uuid // a MONTH period of the plan year
+  target    Decimal  @db.Decimal(14, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kpi    Kpi              @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  period EvaluationPeriod @relation(fields: [periodId], references: [id])
+
+  @@unique([kpiId, periodId])
+  @@index([periodId])
 }
 
 // ----------------------------------------------------------------------------

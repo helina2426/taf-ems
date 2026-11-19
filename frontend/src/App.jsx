@@ -26,6 +26,9 @@ import { ProfilePage } from './pages/employee/ProfilePage.jsx';
 import { PlanYearsPage } from './pages/holding/PlanYearsPage.jsx';
 import { PlanYearDetailPage } from './pages/holding/PlanYearDetailPage.jsx';
 import { SettingsPage } from './pages/holding/SettingsPage.jsx';
+import { PlansPage } from './pages/plans/PlansPage.jsx';
+import { PlanDetailPage } from './pages/plans/PlanDetailPage.jsx';
+import { MyPlanPage } from './pages/plans/MyPlanPage.jsx';
 
 // Which page belongs to each menu address.
 const PAGES = {
@@ -43,6 +46,8 @@ const PAGES = {
   '/audit-log': AuditLogPage,
   '/plan-years': PlanYearsPage,
   '/settings': SettingsPage,
+  '/plans': PlansPage,
+  '/my-plan': MyPlanPage,
 };
 
 // For each menu entry (except the dashboard), work out which roles have it in their menu,
@@ -83,6 +88,8 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             {/* Pages opened from a list (not in the menu). */}
             <Route path="/evaluations/:id" element={<EvaluationDetailPage />} />
+            {/* Every role can open a plan; the server decides which plans each person may see. */}
+            <Route path="/plans/:id" element={<PlanDetailPage />} />
             <Route
               path="/plan-years/:id"
               element={

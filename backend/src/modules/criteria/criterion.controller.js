@@ -26,3 +26,11 @@ export async function setStatus(req, res) {
   const criterion = await criterionService.setCriterionStatus(req.validated.params.id, req.body, req.user);
   res.status(200).json({ success: true, data: { criterion } });
 }
+export function standard(req, res) {
+  res.status(200).json({ success: true, data: criterionService.getStandardBehaviours() });
+}
+
+export async function useStandard(req, res) {
+  const result = await criterionService.useStandardBehaviours(req.user);
+  res.status(200).json({ success: true, data: result });
+}

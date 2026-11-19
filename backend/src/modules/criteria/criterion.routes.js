@@ -22,11 +22,14 @@ const holdingOnly = authorize('HOLDING');
 
 // Everyone logged in can read the criteria: people should know what they are scored on.
 router.get('/', validate(listCriteriaQuerySchema, 'query'), criterionController.list);
+// Version 2: the standard behaviour lists (what "Use the standard behaviours" would add).
+router.get('/standard', criterionController.standard);
 router.get('/:id', withId, criterionController.getById);
 
 // Only Holding users change them.
 router.post('/', holdingOnly, validate(createCriterionSchema), criterionController.create);
 router.patch('/:id', holdingOnly, withId, validate(updateCriterionSchema), criterionController.update);
 router.patch('/:id/status', holdingOnly, withId, validate(criterionStatusSchema), criterionController.setStatus);
+router.post('/use-standard', holdingOnly, criterionController.useStandard);
 
 export default router;

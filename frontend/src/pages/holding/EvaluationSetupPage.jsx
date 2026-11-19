@@ -4,6 +4,10 @@
 //   • A period goes UPCOMING → OPEN → CLOSED (and can be reopened for late corrections).
 //   • A period can only be opened when each criteria list adds up to exactly 100%.
 //   • Criteria cannot be changed while a period is open (scores already given would no longer match).
+//
+// Version 2 (Module 15): criteria are called "behaviours". Each one can describe what a score of
+// 1–5 looks like, and one per list is the Safety behaviour. "Use the standard behaviours" loads
+// the standard Taf lists (the old criteria are switched off, not deleted).
 
 import { useState } from 'react';
 import { api } from '../../api/client.js';
@@ -12,6 +16,7 @@ import { Alert, Badge, EmptyState, ErrorAlert, Field, PageHeader, Spinner } from
 import { useApi } from '../../hooks/useApi.js';
 import { useSubmit } from '../../hooks/useSubmit.js';
 import { fieldError, formatDate } from '../../utils/format.js';
+import { LEVEL_NAMES, levelsFromForm, sortBehaviours } from '../../utils/behaviours.js';
 
 const PERIOD_TONE = { UPCOMING: 'info', OPEN: 'good', CLOSED: 'neutral' };
 
@@ -19,6 +24,7 @@ export function EvaluationSetupPage() {
   const periods = useApi('/evaluation-periods');
   const criteria = useApi('/evaluation-criteria');
   const [dialog, setDialog] = useState(null);
+  const [showInactive, setShowInactive] = useState(false);
   const close = () => setDialog(null);
   const reloadAll = () => {
     periods.reload();
@@ -30,7 +36,7 @@ export function EvaluationSetupPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Periods & criteria" subtitle="When evaluations happen, and what people are scored on." />
+      <PageHeader title="Periods & behaviours" subtitle="When evaluations happen, and the behaviours people are scored on." />
 
       {/* ---------- Periods ---------- */}
       <div className="section-head">
@@ -94,16 +100,29 @@ export function EvaluationSetupPage() {
         </div>
       )}
 
-      {/* ---------- Criteria ---------- */}
-      <div className="section-head">
-        <h2 className="section-title">Criteria</h2>
-        <button className="btn btn-primary" onClick={() => setDialog({ type: 'criterion' })} disabled={Boolean(openPeriod)}>
-          + New criterion
-        </button>
+      {/* ---------- Behaviours (the criteria) ---------- */}
+      <div className="section-head behaviours-head">
+        <h2 className="section-title">Behaviours</h2>
+        <div className="button-row">
+          <label className="checkbox">
+            <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+            <span>Show inactive</span>
+          </label>
+          <button className="btn btn-ghost" onClick={() => setDialog({ type: 'standard' })} disabled={Boolean(openPeriod)}>
+            Use the standard behaviours
+          </button>
+          <button className="btn btn-primary" onClick={() => setDialog({ type: 'criterion' })} disabled={Boolean(openPeriod)}>
+            + New behaviour
+          </button>
+        </div>
       </div>
+      <p className="muted small">
+        Behaviours are <em>how</em> people work (the KPIs measure the results). For each one, describe what a score of 1 to 5 looks like, so every
+        evaluator scores the same way.
+      </p>
       {openPeriod && (
         <Alert type="info">
-          Criteria are locked while "{openPeriod.name}" is open. Close the period to change them.
+          Behaviours are locked while "{openPeriod.name}" is open. Close the period to change them.
         </Alert>
       )}
       {criteria.loading && !criteria.data && <Spinner />}
@@ -114,7 +133,7 @@ export function EvaluationSetupPage() {
             <CriteriaList
               key={list}
               list={list}
-              items={criteria.data.items.filter((c) => c.appliesTo === list)}
+              items={criteria.data.items.filter((c) => c.appliesTo === list && (showInactive || c.isActive))}
               total={criteria.data.totals[list]}
               locked={Boolean(openPeriod)}
               onEdit={(c) => setDialog({ type: 'criterion', criterion: c })}
@@ -128,12 +147,13 @@ export function EvaluationSetupPage() {
       {dialog?.type === 'status' && <PeriodStatus period={dialog.period} to={dialog.to} onClose={close} onSaved={reloadAll} />}
       {dialog?.type === 'criterion' && <CriterionForm criterion={dialog.criterion} onClose={close} onSaved={reloadAll} />}
       {dialog?.type === 'criterionStatus' && <CriterionStatus criterion={dialog.criterion} onClose={close} onSaved={reloadAll} />}
+      {dialog?.type === 'standard' && <UseStandard onClose={close} onSaved={reloadAll} />}
     </div>
   );
 }
 
 function CriteriaList({ list, items, total, locked, onEdit, onToggle }) {
-  const sorted = [...items].sort((a, b) => Number(b.isActive) - Number(a.isActive) || b.weight - a.weight);
+  const sorted = sortBehaviours(items);
   return (
     <div className="panel">
       <div className="panel-head">
@@ -144,15 +164,23 @@ function CriteriaList({ list, items, total, locked, onEdit, onToggle }) {
           <Badge tone="warn">Total {total?.activeWeightTotal ?? 0}% — must be 100%</Badge>
         )}
       </div>
-      {sorted.length === 0 && <p className="muted">No criteria yet.</p>}
+      {sorted.length === 0 && <p className="muted">No behaviours yet.</p>}
       <ul className="criteria-list">
         {sorted.map((c) => (
           <li key={c.id} className={c.isActive ? '' : 'inactive'}>
             <div>
               <div className="strong">
-                {c.name} {!c.isActive && <Badge>Inactive</Badge>}
+                {c.name} {c.isSafety && <Badge tone="warn">Safety</Badge>} {!c.isActive && <Badge>Inactive</Badge>}
               </div>
               {c.description && <div className="muted small">{c.description}</div>}
+              {c.levelDescriptions ? (
+                <details className="levels">
+                  <summary className="small">What 1–5 look like</summary>
+                  <LevelList levels={c.levelDescriptions} />
+                </details>
+              ) : (
+                c.isActive && <div className="small warn-text">Levels 1–5 not described yet</div>
+              )}
             </div>
             <div className="criteria-weight">{c.weight}%</div>
             <div className="row-actions">
@@ -167,6 +195,61 @@ function CriteriaList({ list, items, total, locked, onEdit, onToggle }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+// "1 · Not yet — Ignores safety rules…" for each level.
+export function LevelList({ levels }) {
+  return (
+    <ol className="level-list">
+      {levels.map((text, i) => (
+        <li key={i}>
+          <span className="level-name">
+            {i + 1} · {LEVEL_NAMES[i]}
+          </span>{' '}
+          {text}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+// "Use the standard behaviours": shows the standard lists first, then loads them.
+function UseStandard({ onClose, onSaved }) {
+  const { data, error: loadError } = useApi('/evaluation-criteria/standard');
+  const { run, busy, error } = useSubmit();
+  return (
+    <ConfirmDialog
+      title="Use the standard behaviours"
+      message="The behaviours that are active now will be switched off (not deleted: old evaluations keep their scores), and these lists will be added. You can change them afterwards."
+      confirmLabel="Use these behaviours"
+      busy={busy}
+      onClose={onClose}
+      onConfirm={() =>
+        run(() => api.post('/evaluation-criteria/use-standard'), () => {
+          onSaved();
+          onClose();
+        })
+      }
+    >
+      <ErrorAlert error={loadError || error} />
+      {data && (
+        <div className="two-columns standard-preview">
+          {['EMPLOYEE', 'MANAGER'].map((list) => (
+            <div key={list}>
+              <h4>{list === 'EMPLOYEE' ? 'For employees' : 'For managers'}</h4>
+              <ul className="plain-list small">
+                {data.lists[list].map((b) => (
+                  <li key={b.name}>
+                    {b.name} — {b.weight}%{b.isSafety && ' (Safety)'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </ConfirmDialog>
   );
 }
 
@@ -240,15 +323,20 @@ function CriterionForm({ criterion, onClose, onSaved }) {
     description: criterion?.description ?? '',
     weight: criterion?.weight?.toString() ?? '',
     appliesTo: criterion?.appliesTo ?? 'EMPLOYEE',
+    isSafety: criterion?.isSafety ?? false,
   });
+  const [levels, setLevels] = useState(criterion?.levelDescriptions ?? ['', '', '', '', '']);
   const set = (key) => (e) => setV({ ...v, [key]: e.target.value });
+  const setLevel = (i) => (e) => setLevels(levels.map((text, j) => (j === i ? e.target.value : text)));
   const { run, busy, error } = useSubmit();
 
   function save(event) {
     event.preventDefault();
     // The weight is typed as text; the backend expects a number. An empty box is sent as-is so the backend can say what is missing.
     const weight = v.weight === '' ? undefined : Number(v.weight);
-    const body = isNew ? { ...v, weight } : { name: v.name, description: v.description, weight };
+    const levelDescriptions = levelsFromForm(levels);
+    const common = { name: v.name, description: v.description, weight, isSafety: v.isSafety, levelDescriptions };
+    const body = isNew ? { ...common, appliesTo: v.appliesTo } : common;
     run(() => (isNew ? api.post('/evaluation-criteria', body) : api.patch(`/evaluation-criteria/${criterion.id}`, body)), () => {
       onSaved();
       onClose();
@@ -256,7 +344,7 @@ function CriterionForm({ criterion, onClose, onSaved }) {
   }
 
   return (
-    <FormModal title={isNew ? 'New criterion' : `Edit ${criterion.name}`} formId="criterion-form" busy={busy} onClose={onClose} submitLabel={isNew ? 'Create' : 'Save'}>
+    <FormModal title={isNew ? 'New behaviour' : `Edit ${criterion.name}`} formId="criterion-form" busy={busy} onClose={onClose} submitLabel={isNew ? 'Create' : 'Save'} wide>
       <form id="criterion-form" className="form-grid" onSubmit={save} noValidate>
         <ErrorAlert error={error} inForm />
         {isNew && (
@@ -276,6 +364,20 @@ function CriterionForm({ criterion, onClose, onSaved }) {
         <Field label="Weight (%) *" error={fieldError(error, 'weight')} hint="The active weights of each list must add up to 100%.">
           <input type="number" min="0" max="100" step="0.01" value={v.weight} onChange={set('weight')} />
         </Field>
+        <label className="checkbox span-2">
+          <input type="checkbox" checked={v.isSafety} onChange={(e) => setV({ ...v, isSafety: e.target.checked })} />
+          <span>This is the Safety behaviour (only one per list; used by the safety rule)</span>
+        </label>
+        <fieldset className="span-2 levels-fieldset">
+          <legend>What does each score look like?</legend>
+          <p className="muted small">Fill in all 5, or leave all 5 empty. Short and concrete: what would you see this person do?</p>
+          {levels.map((text, i) => (
+            <Field key={i} label={`${i + 1} · ${LEVEL_NAMES[i]}`} error={fieldError(error, `levelDescriptions.${i}`)}>
+              <input value={text} onChange={setLevel(i)} maxLength={300} />
+            </Field>
+          ))}
+          {fieldError(error, 'levelDescriptions') && <span className="field-error">{fieldError(error, 'levelDescriptions')}</span>}
+        </fieldset>
       </form>
     </FormModal>
   );
@@ -286,7 +388,7 @@ function CriterionStatus({ criterion, onClose, onSaved }) {
   const activate = !criterion.isActive;
   return (
     <ConfirmDialog
-      title={activate ? 'Activate criterion' : 'Deactivate criterion'}
+      title={activate ? 'Activate behaviour' : 'Deactivate behaviour'}
       message={
         activate
           ? `"${criterion.name}" (${criterion.weight}%) will count again. Check that the total is still 100%.`

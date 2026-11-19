@@ -29,15 +29,28 @@ const weight = z
     message: 'Weight can have at most 2 decimals.',
   });
 
+// Version 2 (Module 15): what a score of 1, 2, 3, 4 and 5 looks like — exactly 5 short texts, or null (none).
+const levelText = z.string({ error: 'Describe each level.' }).trim().min(2, 'Describe each level (at least 2 characters).').max(300, 'Must be at most 300 characters.');
+const levelDescriptions = z
+  .array(levelText, { error: 'levelDescriptions must be a list of 5 texts.' })
+  .length(5, 'Describe all 5 levels: 1, 2, 3, 4 and 5.')
+  .nullable()
+  .optional();
+
+// Version 2: the Safety behaviour (only one active per list; checked in the service).
+const isSafety = z.boolean({ error: 'isSafety must be true or false.' }).optional();
+
 export const createCriterionSchema = z.object({
   name,
   description,
   appliesTo: z.enum(CRITERION_LISTS, { error: 'appliesTo must be EMPLOYEE or MANAGER.' }),
   weight,
+  levelDescriptions,
+  isSafety,
 });
 
 export const updateCriterionSchema = z
-  .object({ name, description, weight })
+  .object({ name, description, weight, levelDescriptions, isSafety })
   .partial()
   .refine((data) => Object.keys(data).length > 0, { message: 'Send at least one field to update.' });
 

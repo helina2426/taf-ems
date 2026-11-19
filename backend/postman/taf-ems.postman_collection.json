@@ -23648,6 +23648,999 @@
           }
         }
       ]
+    },
+    {
+      "name": "Behaviours (v2)",
+      "description": "Version 2, Module 15: behaviours with what a 1-5 looks like, the Safety flag, and \"Use the standard behaviours\". It needs no open evaluation period, so it closes the 2026 period and reopens it at the end. It puts the old criteria back at the end, so it can be run again.",
+      "item": [
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - remember the current criteria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().data.items;",
+                  "pm.environment.set('oldCriteriaIds', JSON.stringify(items.map((c) => c.id)));",
+                  "pm.test('Every criterion has the new fields', () => items.forEach((c) => { pm.expect(c).to.have.property('levelDescriptions'); pm.expect(c.isSafety).to.be.a('boolean'); }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?isActive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - the standard behaviour lists",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('6 employee and 8 Manager behaviours', () => { pm.expect(d.lists.EMPLOYEE).to.have.length(6); pm.expect(d.lists.MANAGER).to.have.length(8); });",
+                  "pm.test('5 level names', () => pm.expect(d.levelNames).to.have.length(5));",
+                  "pm.test('Each list adds up to 100', () => ['EMPLOYEE', 'MANAGER'].forEach((l) => pm.expect(d.lists[l].reduce((s, b) => s + b.weight, 0)).to.eql(100)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/standard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "standard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - use the standard list while a period is open (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/use-standard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "use-standard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - use the standard list (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/use-standard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "use-standard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - may read the standard list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/standard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "standard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - close the 2026 period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{annualPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{annualPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - use the standard behaviours",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const active = d.items.filter((c) => c.isActive);",
+                  "pm.test('Both lists add up to 100%', () => { pm.expect(d.totals.EMPLOYEE.isComplete).to.eql(true); pm.expect(d.totals.MANAGER.isComplete).to.eql(true); });",
+                  "pm.test('14 active behaviours, each with 5 levels', () => { pm.expect(active).to.have.length(14); active.forEach((c) => pm.expect(c.levelDescriptions).to.have.length(5)); });",
+                  "pm.test('One Safety behaviour per list', () => ['EMPLOYEE', 'MANAGER'].forEach((l) => pm.expect(active.filter((c) => c.appliesTo === l && c.isSafety).map((c) => c.name)).to.eql(['Safety'])));",
+                  "pm.test('The old criteria are kept, inactive', () => JSON.parse(pm.environment.get('oldCriteriaIds')).forEach((id) => pm.expect(d.items.find((c) => c.id === id).isActive).to.eql(false)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/use-standard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "use-standard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - use it again (expect 409: already in use)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/use-standard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "use-standard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - a second Safety behaviour (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Road safety {{runNo}}\",\n  \"appliesTo\": \"EMPLOYEE\",\n  \"weight\": 5,\n  \"isSafety\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - only 4 levels described (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Asks for all 5 levels', () => pm.expect(pm.response.json().error.details.map((x) => x.field)).to.include('levelDescriptions'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Punctuality {{runNo}}\",\n  \"appliesTo\": \"EMPLOYEE\",\n  \"weight\": 5,\n  \"levelDescriptions\": [\n    \"Often late\",\n    \"Sometimes late\",\n    \"On time\",\n    \"Always early\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - a new behaviour with its 5 levels",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const c = pm.response.json().data.criterion;",
+                  "pm.test('Levels saved in order', () => pm.expect(c.levelDescriptions[4]).to.eql('Helps others be on time'));",
+                  "pm.test('Not the Safety behaviour', () => pm.expect(c.isSafety).to.eql(false));",
+                  "pm.environment.set('testCriterionId', c.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Punctuality {{runNo}}\",\n  \"appliesTo\": \"EMPLOYEE\",\n  \"weight\": 5,\n  \"levelDescriptions\": [\n    \"Often late\",\n    \"Sometimes late\",\n    \"On time\",\n    \"Always early\",\n    \"Helps others be on time\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - make it the Safety behaviour (expect 409: Safety already exists)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isSafety\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/{{testCriterionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "{{testCriterionId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - remove its level descriptions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No levels any more', () => pm.expect(pm.response.json().data.criterion.levelDescriptions).to.eql(null));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"levelDescriptions\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/{{testCriterionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "{{testCriterionId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - totals show 105% for employees (the new one is extra)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('105%, not complete', () => { const t = pm.response.json().data.totals.EMPLOYEE; pm.expect(t.activeWeightTotal).to.eql(105); pm.expect(t.isComplete).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?appliesTo=EMPLOYEE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "appliesTo",
+                  "value": "EMPLOYEE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Audit log - the standard list was loaded",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('At least one CRITERIA_STANDARD_LOADED', () => pm.expect(pm.response.json().data.items.length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs?action=CRITERIA_STANDARD_LOADED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "CRITERIA_STANDARD_LOADED"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee Alpha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - reads the behaviours and their levels",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Safety is first, with 5 levels', () => { const c = pm.response.json().data.items[0]; pm.expect(c.name).to.eql('Safety'); pm.expect(c.levelDescriptions).to.have.length(5); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?isActive=true&appliesTo=EMPLOYEE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                },
+                {
+                  "key": "appliesTo",
+                  "value": "EMPLOYEE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - use the standard list (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/use-standard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "use-standard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clean up - switch the new behaviours off and the old criteria back on",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const base = pm.environment.get('baseUrl');",
+                  "const token = pm.environment.get('token');",
+                  "const active = pm.response.json().data.items.map((c) => c.id);",
+                  "const old = JSON.parse(pm.environment.get('oldCriteriaIds'));",
+                  "// Off first, then on: \"Teamwork\" is in both lists, and two ACTIVE criteria cannot share a name.",
+                  "const send = (id, isActive) => new Promise((resolve) => pm.sendRequest({",
+                  "  url: base + '/evaluation-criteria/' + id + '/status', method: 'PATCH',",
+                  "  header: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ isActive }) },",
+                  "}, (err, res) => resolve(err ? 0 : res.code)));",
+                  "(async () => {",
+                  "  const codes = [];",
+                  "  for (const id of active) codes.push(await send(id, false));",
+                  "  for (const id of old) codes.push(await send(id, true));",
+                  "  pm.test('Every switch worked', () => pm.expect(codes.every((c) => c === 200)).to.eql(true));",
+                  "})();"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?isActive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clean up - the old criteria are back (100% each)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('Same criteria as before', () => pm.expect(d.items.map((c) => c.id).sort()).to.eql(JSON.parse(pm.environment.get('oldCriteriaIds')).sort()));",
+                  "pm.test('Both lists 100%', () => { pm.expect(d.totals.EMPLOYEE.isComplete).to.eql(true); pm.expect(d.totals.MANAGER.isComplete).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?isActive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clean up - reopen the 2026 period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{annualPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{annualPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

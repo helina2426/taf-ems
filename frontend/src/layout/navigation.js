@@ -13,7 +13,7 @@ export const NAVIGATION = {
     { to: '/plan-years', label: 'Plan years' },
     { to: '/plans', label: 'Plans' },
     { to: '/check-ins', label: 'Check-ins', feature: 'checkIns' },
-    { to: '/evaluation-setup', label: 'Periods & criteria' },
+    { to: '/evaluation-setup', label: 'Periods & behaviours' },
     { to: '/reports', label: 'Reports' },
     { to: '/holding-users', label: 'Holding users' },
     { to: '/audit-log', label: 'Audit log' },

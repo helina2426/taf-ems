@@ -1,11 +1,18 @@
 // Database access for evaluation criteria.
 
 import prisma from '../../config/prisma.js';
+import { Prisma } from '../../generated/prisma/client.ts';
+
+// A JSON column needs a special value to be emptied ("no level descriptions").
+function toDb(data) {
+  if (data.levelDescriptions === null) return { ...data, levelDescriptions: Prisma.DbNull };
+  return data;
+}
 
 export function findMany({ appliesTo, isActive }) {
   return prisma.evaluationCriterion.findMany({
     where: { ...(appliesTo && { appliesTo }), ...(isActive !== undefined && { isActive }) },
-    orderBy: [{ appliesTo: 'asc' }, { isActive: 'desc' }, { weight: 'desc' }, { name: 'asc' }],
+    orderBy: [{ appliesTo: 'asc' }, { isActive: 'desc' }, { isSafety: 'desc' }, { weight: 'desc' }, { name: 'asc' }],
   });
 }
 
@@ -40,12 +47,31 @@ export async function activeWeightTotals(db = prisma) {
   return totals;
 }
 
+// Version 2: the active Safety behaviour of a list (there may be only one).
+export function findActiveSafety(appliesTo, excludeId, db = prisma) {
+  return db.evaluationCriterion.findFirst({
+    where: { appliesTo, isActive: true, isSafety: true, ...(excludeId && { NOT: { id: excludeId } }) },
+  });
+}
+
+export function findActive(db = prisma) {
+  return db.evaluationCriterion.findMany({ where: { isActive: true } });
+}
+
+export function deactivateAll(db = prisma) {
+  return db.evaluationCriterion.updateMany({ where: { isActive: true }, data: { isActive: false } });
+}
+
+export function createMany(rows, db = prisma) {
+  return db.evaluationCriterion.createMany({ data: rows.map(toDb) });
+}
+
 export function create(data, db = prisma) {
-  return db.evaluationCriterion.create({ data });
+  return db.evaluationCriterion.create({ data: toDb(data) });
 }
 
 export function update(id, data, db = prisma) {
-  return db.evaluationCriterion.update({ where: { id }, data });
+  return db.evaluationCriterion.update({ where: { id }, data: toDb(data) });
 }
 
 export function toCriterionResponse(criterion) {
@@ -56,6 +82,9 @@ export function toCriterionResponse(criterion) {
     appliesTo: criterion.appliesTo,
     weight: Number(criterion.weight),
     isActive: criterion.isActive,
+    // Version 2: what 1, 2, 3, 4 and 5 look like (null = not described yet), and the Safety flag.
+    levelDescriptions: criterion.levelDescriptions ?? null,
+    isSafety: criterion.isSafety,
     createdAt: criterion.createdAt,
     updatedAt: criterion.updatedAt,
   };

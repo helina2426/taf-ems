@@ -127,14 +127,18 @@ The detailed rules (company wall, "only your own", status checks) are enforced b
 | PATCH | `/evaluation-periods/:id` | H | Not when CLOSED |
 | PATCH | `/evaluation-periods/:id/status` | H | `status`: UPCOMING→OPEN, OPEN→CLOSED, CLOSED→OPEN. Opening needs both criteria lists at 100% |
 
-### Evaluation criteria — `/evaluation-criteria`
+### Evaluation criteria (behaviours) — `/evaluation-criteria`
 | Method | Path | Who | Body / notes |
 |---|---|---|---|
 | GET | `/evaluation-criteria` | All | `appliesTo` (EMPLOYEE, MANAGER), `isActive`; reply includes the weight totals |
 | GET | `/evaluation-criteria/:id` | All | |
-| POST | `/evaluation-criteria` | H | `name`, `appliesTo`, `weight`, optional `description` |
-| PATCH | `/evaluation-criteria/:id` | H | `name`, `description`, `weight` |
+| GET | `/evaluation-criteria/standard` | All | Version 2: the standard behaviour lists (`levelNames`, `lists.EMPLOYEE`, `lists.MANAGER`) |
+| POST | `/evaluation-criteria` | H | `name`, `appliesTo`, `weight`, optional `description`; version 2: `levelDescriptions` (5 texts: what a 1–5 looks like, or null), `isSafety` |
+| PATCH | `/evaluation-criteria/:id` | H | `name`, `description`, `weight`, `levelDescriptions`, `isSafety` |
 | PATCH | `/evaluation-criteria/:id/status` | H | `isActive` |
+| POST | `/evaluation-criteria/use-standard` | H | Version 2: switches the active lists off (not deleted) and adds the standard behaviours. 409 if they are already in use |
+
+Version 2 (Module 15): criteria are shown as **behaviours**. Only one active Safety behaviour per list (409). Like before, nothing can change while a (version 1) evaluation period is open. Audit log: `CRITERIA_STANDARD_LOADED`.
 
 Changes to criteria are refused (409) while any period is OPEN.
 

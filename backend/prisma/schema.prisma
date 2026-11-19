@@ -367,6 +367,9 @@ model EvaluationCriterion {
   appliesTo   EvaluationType
   weight      Decimal        @db.Decimal(5, 2) // percent; active weights per list add up to 100
   isActive    Boolean        @default(true)
+  // Version 2 (Module 15): criteria are now "behaviours".
+  levelDescriptions Json? // what a score of 1, 2, 3, 4 and 5 looks like: a list of 5 short texts
+  isSafety          Boolean @default(false) // the Safety behaviour (used by the optional safety rule)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 

@@ -9,6 +9,7 @@ import { Link, useParams } from 'react-router';
 import { api } from '../../api/client.js';
 import { useAuth } from '../../auth/useAuth.js';
 import { Alert, Badge, ErrorAlert, Field, PageHeader, Spinner } from '../../components/ui.jsx';
+import { levelHint } from '../../utils/behaviours.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useSubmit } from '../../hooks/useSubmit.js';
 import { STATUS_LABEL, STATUS_TONE, canWrite, isApprover, previewScore } from '../../utils/evaluations.js';
@@ -201,6 +202,8 @@ function ScoreEditor({ ev, onSaved }) {
                 {c.name} <span className="muted small">({c.weight}%)</span>
               </div>
               {c.description && <div className="muted small">{c.description}</div>}
+              {/* Version 2: what the chosen score means for this behaviour. */}
+              {scores[c.id]?.score && <div className="score-level small">{levelHint(c, Number(scores[c.id].score))}</div>}
             </div>
             <div className="score-buttons" role="radiogroup" aria-label={`Score for ${c.name}`}>
               {[1, 2, 3, 4, 5].map((n) => (
@@ -211,6 +214,7 @@ function ScoreEditor({ ev, onSaved }) {
                   aria-checked={Number(scores[c.id]?.score) === n}
                   className={`score-button ${Number(scores[c.id]?.score) === n ? 'selected' : ''}`}
                   onClick={() => setScore(c.id, 'score', n)}
+                  title={levelHint(c, n)}
                 >
                   {n}
                 </button>

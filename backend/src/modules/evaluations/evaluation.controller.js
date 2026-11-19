@@ -54,3 +54,8 @@ export async function acknowledge(req, res) {
   const evaluation = await reviewService.acknowledgeEvaluation(req.validated.params.id, req.body, req.user);
   res.status(200).json({ success: true, data: { evaluation } });
 }
+
+// Version 2: the periods an evaluation can be made in.
+export async function periods(req, res) {
+  res.status(200).json({ success: true, data: await service.listEvaluationPeriods() });
+}

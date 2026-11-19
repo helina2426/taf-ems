@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/useAuth.js';
 import { Badge, EmptyState, ErrorAlert, PageHeader, Spinner } from '../../components/ui.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { formatDate, percent } from '../../utils/format.js';
+import { KIND_LABEL, RATING_LABEL, RATING_TONE } from '../../utils/evaluations.js';
 
 export function MyEvaluationsPage() {
   const { user } = useAuth();
@@ -22,13 +23,14 @@ export function MyEvaluationsPage() {
           {data.items.map((ev) => (
             <Link key={ev.id} to={`/evaluations/${ev.id}`} className="card-link">
               <div>
-                <div className="strong">{ev.period.name}</div>
+                <div className="strong">{ev.kind ? `${KIND_LABEL[ev.kind]} — ${ev.period.name}` : ev.period.name}</div>
                 <div className="muted small">
                   {ev.company.name} · published {formatDate(ev.publishedAt)}
                 </div>
               </div>
               <div className="card-link-right">
-                <span className="score-medium">{percent(ev.overallScore)}</span>
+                {ev.rating && <Badge tone={RATING_TONE[ev.rating]}>{RATING_LABEL[ev.rating]}</Badge>}
+                <span className="score-medium">{ev.kind ? `${ev.overallScore} / 100` : percent(ev.overallScore)}</span>
                 {ev.acknowledgedAt ? <Badge tone="good">Acknowledged</Badge> : <Badge tone="warn">Please read</Badge>}
               </div>
             </Link>

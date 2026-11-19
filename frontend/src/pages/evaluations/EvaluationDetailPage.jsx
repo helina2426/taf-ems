@@ -3,6 +3,9 @@
 //   • an approver: approve, return with a reason, publish
 //   • the person evaluated (after publication): read it and acknowledge it
 // The backend checks every action again; the page only shows the buttons that make sense.
+//
+// Version 2 (Module 16): a plan-based evaluation (mid-year review or annual evaluation) also shows
+// the KPI scores — calculated by the system from the confirmed monthly numbers — and the rating.
 
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
@@ -12,7 +15,8 @@ import { Alert, Badge, ErrorAlert, Field, PageHeader, Spinner } from '../../comp
 import { levelHint } from '../../utils/behaviours.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useSubmit } from '../../hooks/useSubmit.js';
-import { STATUS_LABEL, STATUS_TONE, canWrite, isApprover, previewScore } from '../../utils/evaluations.js';
+import { KIND_LABEL, RATING_LABEL, RATING_TONE, STATUS_LABEL, STATUS_TONE, canWrite, isApprover, previewScore, previewV2 } from '../../utils/evaluations.js';
+import { DIRECTION, formatNumber } from '../../utils/plans.js';
 import { formatDate, formatDateTime, fullName, percent } from '../../utils/format.js';
 
 export function EvaluationDetailPage() {
@@ -35,7 +39,7 @@ export function EvaluationDetailPage() {
       </Link>
       <PageHeader
         title={fullName(ev.employee)}
-        subtitle={`${ev.type === 'MANAGER' ? 'Manager evaluation' : 'Employee evaluation'} · ${ev.company.name} · ${ev.period.name}`}
+        subtitle={`${ev.kind ? KIND_LABEL[ev.kind] : ev.type === 'MANAGER' ? 'Manager evaluation' : 'Employee evaluation'}${ev.kind && ev.type === 'MANAGER' ? ' (Manager)' : ''} · ${ev.company.name} · ${ev.kind ? ev.planYear.name : ev.period.name}`}
         actions={<Badge tone={STATUS_TONE[ev.status]}>{STATUS_LABEL[ev.status]}</Badge>}
       />
 
@@ -50,6 +54,7 @@ export function EvaluationDetailPage() {
 
       <div className="detail-grid">
         <div className="detail-main">
+          {ev.kind && <KpiResults ev={ev} live={['DRAFT', 'RETURNED'].includes(ev.status)} />}
           {writable ? <ScoreEditor ev={ev} onSaved={reload} /> : <ScoreTable ev={ev} />}
           {writable ? <FeedbackEditor ev={ev} onSaved={reload} /> : <FeedbackView ev={ev} />}
           {writable && <SubmitBox ev={ev} onSaved={reload} />}
@@ -57,15 +62,19 @@ export function EvaluationDetailPage() {
         </div>
 
         <aside className="detail-side">
-          <div className="panel score-panel">
-            <div className="stat-label">Overall score</div>
-            <div className="score-big">{percent(ev.overallScore)}</div>
-            {ev.overallScore === null && <div className="muted small">Shown when every criterion has a score.</div>}
-          </div>
+          {ev.kind ? (
+            <RatingPanel ev={ev} />
+          ) : (
+            <div className="panel score-panel">
+              <div className="stat-label">Overall score</div>
+              <div className="score-big">{percent(ev.overallScore)}</div>
+              {ev.overallScore === null && <div className="muted small">Shown when every criterion has a score.</div>}
+            </div>
+          )}
 
           {isApprover(user) && ['SUBMITTED', 'APPROVED'].includes(ev.status) && <ReviewBox ev={ev} onSaved={reload} />}
 
-          {!isPerson && (
+          {!isPerson && !ev.kind && (
             <div className="panel">
               <h3>Self-assessment</h3>
               {ev.selfAssessment ? (
@@ -125,15 +134,15 @@ export function EvaluationDetailPage() {
 function ScoreTable({ ev }) {
   return (
     <div className="panel">
-      <h3>Scores</h3>
+      <h3>{ev.kind ? `Behaviours (${ev.behaviourPart} points)` : 'Scores'}</h3>
       {ev.scores.length === 0 ? (
         <p className="muted">No scores yet.</p>
       ) : (
         <table className="table">
           <thead>
             <tr>
-              <th>Criterion</th>
-              <th className="num">Weight</th>
+              <th>{ev.kind ? 'Behaviour' : 'Criterion'}</th>
+              <th className="num">{ev.kind ? 'Points' : 'Weight'}</th>
               <th className="num">Score (1–5)</th>
             </tr>
           </thead>
@@ -144,7 +153,7 @@ function ScoreTable({ ev }) {
                   <div className="strong">{s.criterion}</div>
                   {s.comment && <div className="muted small">{s.comment}</div>}
                 </td>
-                <td className="num">{s.weightUsed}%</td>
+                <td className="num">{ev.kind ? `${formatNumber((s.score / 5) * s.weightUsed)} / ${s.weightUsed}` : `${s.weightUsed}%`}</td>
                 <td className="num strong">{s.score}</td>
               </tr>
             ))}
@@ -173,6 +182,9 @@ function ScoreEditor({ ev, onSaved }) {
     setScores({ ...scores, [id]: { ...scores[id], [key]: value } });
   };
   const preview = previewScore(criteria, scores);
+  // Version 2: behaviours count in points (e.g. Safety 20% of 30 points = 6 points).
+  const pointsOf = Object.fromEntries((ev.behaviours ?? []).map((b) => [b.criterionId, b.weightPoints]));
+  const v2Preview = ev.kind ? previewV2(ev.resultsScore, ev.behaviours, scores, { safetyCapEnabled: ev.planYear.safetyCapEnabled }) : null;
 
   function save() {
     const body = {
@@ -189,7 +201,7 @@ function ScoreEditor({ ev, onSaved }) {
   return (
     <div className="panel">
       <div className="panel-head">
-        <h3>Scores</h3>
+        <h3>{ev.kind ? `Behaviours (${ev.behaviourPart} points)` : 'Scores'}</h3>
         <span className="muted small">1 = far below expectations · 5 = excellent</span>
       </div>
       <ErrorAlert error={error} />
@@ -199,7 +211,7 @@ function ScoreEditor({ ev, onSaved }) {
           <div key={c.id} className="score-row">
             <div>
               <div className="strong">
-                {c.name} <span className="muted small">({c.weight}%)</span>
+                {c.name} <span className="muted small">({ev.kind ? `${pointsOf[c.id] ?? '—'} points` : `${c.weight}%`})</span>
               </div>
               {c.description && <div className="muted small">{c.description}</div>}
               {/* Version 2: what the chosen score means for this behaviour. */}
@@ -231,7 +243,18 @@ function ScoreEditor({ ev, onSaved }) {
       </div>
       <div className="panel-foot">
         <span className="muted">
-          Preview: <strong>{preview === null ? 'score every criterion' : `${preview}%`}</strong>
+          Preview:{' '}
+          <strong>
+            {ev.kind
+              ? v2Preview
+                ? `${v2Preview.overallScore} / 100 · ${RATING_LABEL[v2Preview.rating]}`
+                : ev.resultsScore === null
+                  ? 'waiting for confirmed KPI numbers'
+                  : 'score every behaviour'
+              : preview === null
+                ? 'score every criterion'
+                : `${preview}%`}
+          </strong>
         </span>
         <button className="btn btn-primary" onClick={save} disabled={busy || Object.keys(scores).length === 0}>
           {busy ? 'Saving…' : 'Save scores'}
@@ -356,6 +379,93 @@ function Acknowledge({ ev, onSaved }) {
       <button className="btn btn-primary" disabled={busy} onClick={() => run(() => api.post(`/evaluations/${ev.id}/acknowledge`, comment ? { comment } : {}), onSaved)}>
         {busy ? 'Saving…' : 'I have read my evaluation'}
       </button>
+    </div>
+  );
+}
+
+// Version 2: the KPI scores. Calculated by the system from the confirmed monthly numbers;
+// while the evaluation can still change they are calculated again each time the page loads.
+function KpiResults({ ev, live }) {
+  return (
+    <div className="panel kpi-panel">
+      <div className="panel-head">
+        <h3>Results — KPIs ({ev.resultsShare} points)</h3>
+        <span className="muted small">{live ? 'Calculated now from the confirmed monthly numbers' : 'Saved when the evaluation was submitted'}</span>
+      </div>
+      {ev.planMissing ? (
+        <p className="muted">The plan is not active, so the KPI scores cannot be calculated.</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="table kpi-results">
+            <thead>
+              <tr>
+                <th>KPI</th>
+                <th className="num">Target</th>
+                <th className="num">Actual</th>
+                <th className="num">Achieved</th>
+                <th className="num">Score</th>
+                <th className="num">Points</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ev.kpiScores.map((k) => (
+                <tr key={k.kpiId}>
+                  <td>
+                    <div className="strong">{k.name}</div>
+                    <div className="muted small">
+                      {k.direction && DIRECTION[k.direction]?.short} · {k.unit}
+                      {k.monthsUsed !== null && ` · ${k.monthsUsed}${k.monthsTotal ? ` of ${k.monthsTotal}` : ''} months confirmed`}
+                    </div>
+                  </td>
+                  <td className="num">{formatNumber(k.targetUsed)}</td>
+                  <td className="num">{formatNumber(k.actualUsed)}</td>
+                  <td className="num">{k.achievementPercent === null ? '—' : `${k.achievementPercent}%`}</td>
+                  <td className="num strong">{k.score ?? '—'}</td>
+                  <td className="num">{k.points === null ? '—' : `${formatNumber(k.points)} / ${k.weight}`}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={5} className="strong">
+                  Results
+                </td>
+                <td className="num strong">{ev.resultsScore === null ? '—' : `${formatNumber(ev.resultsScore)} / ${ev.resultsShare}`}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+      <p className="muted small">
+        Score: 110%+ → 5 · 100–109% → 4 · 85–99% → 3 · 70–84% → 2 · below 70% → 1. Points = score ÷ 5 × the KPI weight. The target is the target of the
+        months that have a confirmed number.
+      </p>
+    </div>
+  );
+}
+
+// Version 2: the rating, and how the 100 points are made.
+function RatingPanel({ ev }) {
+  return (
+    <div className="panel score-panel">
+      <div className="stat-label">Rating</div>
+      {ev.rating ? (
+        <div className="rating-big">
+          <Badge tone={RATING_TONE[ev.rating]}>{RATING_LABEL[ev.rating]}</Badge>
+        </div>
+      ) : (
+        <div className="muted small">Shown when every KPI has a confirmed number and every behaviour has a score.</div>
+      )}
+      <div className="score-big">{ev.overallScore === null ? '—' : ev.overallScore}</div>
+      <div className="muted small">out of 100</div>
+      <dl className="facts">
+        <dt>Results (KPIs)</dt>
+        <dd>{ev.resultsScore === null ? '—' : `${formatNumber(ev.resultsScore)} / ${ev.resultsShare}`}</dd>
+        <dt>Behaviours</dt>
+        <dd>{ev.behaviourScore === null ? '—' : `${formatNumber(ev.behaviourScore)} / ${ev.behaviourPart}`}</dd>
+      </dl>
+      {ev.safetyCapApplied && <Alert type="info">The safety rule lowered the rating: Safety was scored 1.</Alert>}
+      <p className="muted small">90+ Exceeds · 75–89 Successfully meets · 55–74 Partially meets · below 55 Does not meet</p>
     </div>
   );
 }

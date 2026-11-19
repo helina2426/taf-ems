@@ -1,8 +1,10 @@
 // The list of evaluations.
 //   • Manager: their company's employee evaluations; can start new ones.
 //   • Holding: all of them; approvers can also start Manager evaluations, and see what waits for approval.
+// Version 2 (Module 16): the period list also has each plan year's mid-year review (first half) and
+// annual evaluation. Those are plan-based: KPI scores come from the plan, and a rating is shown.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '../../api/client.js';
 import { useAuth } from '../../auth/useAuth.js';
@@ -12,9 +14,8 @@ import { PeriodSelect } from '../../components/PeriodSelect.jsx';
 import { Badge, EmptyState, ErrorAlert, Field, PageHeader, Spinner } from '../../components/ui.jsx';
 import { useApi } from '../../hooks/useApi.js';
 import { useCompanyOptions } from '../../hooks/useCompanyOptions.js';
-import { defaultPeriodId, usePeriods } from '../../hooks/usePeriods.js';
 import { useSubmit } from '../../hooks/useSubmit.js';
-import { EVALUATION_STATUSES, STATUS_LABEL, STATUS_TONE, isApprover } from '../../utils/evaluations.js';
+import { EVALUATION_STATUSES, RATING_LABEL, RATING_TONE, STATUS_LABEL, STATUS_TONE, defaultEvaluationPeriodId, isApprover } from '../../utils/evaluations.js';
 import { fieldError, formatDate, fullName, percent } from '../../utils/format.js';
 
 export function EvaluationsPage() {
@@ -24,7 +25,9 @@ export function EvaluationsPage() {
   const approver = isApprover(user);
   const canStart = user.role === 'MANAGER' || approver;
 
-  const { periods } = usePeriods();
+  // Version 1 periods + each plan year's mid-year review and annual evaluation.
+  const periodList = useApi('/evaluations/periods');
+  const periods = useMemo(() => periodList.data?.items ?? [], [periodList.data]);
   const companies = useCompanyOptions({ onlyActive: false, enabled: isHolding });
   const [filters, setFilters] = useState({ periodId: '', status: '', type: '', companyId: '', page: 1 });
   const setFilter = (key, value) => setFilters({ ...filters, [key]: value, page: 1 });
@@ -32,12 +35,13 @@ export function EvaluationsPage() {
   // When the periods arrive, choose the open one (or the latest) the first time.
   // (Only if nothing was chosen yet — never overwrite the user's own choice.)
   useEffect(() => {
-    if (periods.length > 0) setFilters((f) => (f.periodId ? f : { ...f, periodId: defaultPeriodId(periods) }));
+    if (periods.length > 0) setFilters((f) => (f.periodId ? f : { ...f, periodId: defaultEvaluationPeriodId(periods) }));
   }, [periods]);
 
   const { data, error, loading, reload } = useApi(filters.periodId ? '/evaluations' : null, { ...filters, pageSize: 50 });
   const [starting, setStarting] = useState(false);
   const period = periods.find((p) => p.id === filters.periodId);
+  const planBased = period && period.kind !== 'VERSION_1';
 
   return (
     <div className="page">
@@ -89,6 +93,11 @@ export function EvaluationsPage() {
 
       {loading && !data && <Spinner />}
       <ErrorAlert error={error} />
+      {planBased && (
+        <p className="muted small">
+          Plan-based: the KPI scores come from the confirmed monthly numbers of {period.planYear?.name}, the behaviours are scored by the evaluator. Score out of 100.
+        </p>
+      )}
       {data && data.items.length === 0 && <EmptyState>No evaluations match these filters.</EmptyState>}
       {data && data.items.length > 0 && (
         <div className="table-wrap">
@@ -98,6 +107,7 @@ export function EvaluationsPage() {
                 <th>Person</th>
                 {isHolding && <th>Company</th>}
                 <th>Status</th>
+                {planBased && <th>Rating</th>}
                 <th className="num">Score</th>
                 <th>Last change</th>
               </tr>
@@ -115,7 +125,8 @@ export function EvaluationsPage() {
                   <td>
                     <Badge tone={STATUS_TONE[ev.status]}>{STATUS_LABEL[ev.status]}</Badge>
                   </td>
-                  <td className="num strong">{percent(ev.overallScore)}</td>
+                  {planBased && <td>{ev.rating ? <Badge tone={RATING_TONE[ev.rating]}>{RATING_LABEL[ev.rating]}</Badge> : <span className="muted">—</span>}</td>}
+                  <td className="num strong">{planBased ? (ev.overallScore ?? '—') : percent(ev.overallScore)}</td>
                   <td className="small">{formatDate(ev.updatedAt)}</td>
                 </tr>
               ))}
@@ -186,6 +197,8 @@ function StartEvaluation({ period, existing, onClose, onStarted }) {
           </Field>
         )}
         {!people.loading && options.length === 0 && <p className="muted">Everyone already has an evaluation in this period.</p>}
+        {period?.kind === 'MID_YEAR' && <p className="muted small">The person needs an active plan. The KPI scores use the confirmed numbers of the first half so far.</p>}
+        {period?.kind === 'ANNUAL' && <p className="muted small">The person needs an active plan and at least 6 full months in the year (the 6-month rule).</p>}
       </form>
     </FormModal>
   );

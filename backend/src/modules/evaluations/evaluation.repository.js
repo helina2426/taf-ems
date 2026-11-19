@@ -9,7 +9,7 @@ export const evaluationInclude = {
   employee: { include: { user: { select: { id: true, role: true } } } },
   evaluator: { select: { email: true } },
   publishedBy: { select: { email: true } },
-  scores: { include: { criterion: true }, orderBy: { weightUsed: 'desc' } },
+  scores: { include: { criterion: true, kpi: { select: { name: true, unit: true, direction: true } } }, orderBy: { weightUsed: 'desc' } },
   reviews: { include: { reviewer: { select: { email: true } } }, orderBy: { decidedAt: 'asc' } },
 };
 
@@ -48,6 +48,27 @@ export function findPeriodById(id, db = prisma) {
   return db.evaluationPeriod.findFirst({ where: { id, cycleId: null } });
 }
 
+// Version 2: any period an evaluation can be made in — a version 1 period, or a plan-year period
+// (the service checks it is the first half or the year), with its plan year.
+export function findEvaluationPeriod(id, db = prisma) {
+  return db.evaluationPeriod.findUnique({ where: { id }, include: { cycle: true } });
+}
+
+// The periods to choose from on the evaluations page: version 1 periods, and the first half
+// and the year of every plan year that has started (not PLANNING).
+export function findEvaluationPeriods(db = prisma) {
+  return db.evaluationPeriod.findMany({
+    where: {
+      OR: [
+        { cycleId: null },
+        { cycle: { status: { not: 'PLANNING' } }, OR: [{ type: 'YEAR' }, { type: 'HALF', sequence: 1 }] },
+      ],
+    },
+    include: { cycle: true },
+    orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }],
+  });
+}
+
 export function findActiveCriteria(appliesTo, db = prisma) {
   return db.evaluationCriterion.findMany({ where: { appliesTo, isActive: true } });
 }
@@ -73,8 +94,15 @@ export function upsertScore({ evaluationId, criterionId, score, comment, weightU
   });
 }
 
+// Removes the behaviour scores of behaviours that are no longer active (KPI rows are not touched).
 export function deleteScoresNotIn(evaluationId, criterionIds, db = prisma) {
-  return db.evaluationScore.deleteMany({ where: { evaluationId, criterionId: { notIn: criterionIds } } });
+  return db.evaluationScore.deleteMany({ where: { evaluationId, criterionId: { not: null, notIn: criterionIds } } });
+}
+
+// Version 2: saves ("freezes") the KPI scores at submission, replacing any earlier ones.
+export async function replaceKpiScores(evaluationId, rows, db = prisma) {
+  await db.evaluationScore.deleteMany({ where: { evaluationId, kpiId: { not: null } } });
+  if (rows.length > 0) await db.evaluationScore.createMany({ data: rows.map((r) => ({ ...r, evaluationId })) });
 }
 
 // ---------- Review and publication (Module 9) ----------

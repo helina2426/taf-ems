@@ -66,6 +66,14 @@ enum ReviewDecision {
   RETURNED
 }
 
+// Version 2 (Module 16): the UN-style rating of a plan-based evaluation.
+enum EvaluationRating {
+  EXCEEDS // 90 or more
+  SUCCESSFULLY_MEETS // 75–89
+  PARTIALLY_MEETS // 55–74
+  DOES_NOT_MEET // below 55
+}
+
 // ---- Version 2: plan-based evaluation (Module 11) ----
 
 enum CalendarType {
@@ -414,6 +422,12 @@ model Evaluation {
   publishedById   String?          @db.Uuid
   acknowledgedAt  DateTime?
   employeeComment String?
+  // Version 2 (Module 16): plan-based evaluations (mid-year review on H1, annual on the YEAR period).
+  resultsShare     Int? // points for the KPIs, copied from the plan year: 70 (employee) or 80 (Manager)
+  resultsScore     Decimal?          @db.Decimal(5, 2) // points from the KPIs (calculated)
+  behaviourScore   Decimal?          @db.Decimal(5, 2) // points from the behaviours (the evaluator)
+  rating           EvaluationRating?
+  safetyCapApplied Boolean           @default(false) // the safety rule lowered the rating
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -431,20 +445,30 @@ model Evaluation {
   @@index([evaluatorId])
 }
 
+// One score of an evaluation. A row is EITHER a behaviour score (criterionId) OR,
+// in version 2, a KPI score (kpiId) — never both (checked in the service).
 model EvaluationScore {
   id           String   @id @default(uuid()) @db.Uuid
   evaluationId String   @db.Uuid
-  criterionId  String   @db.Uuid
+  criterionId  String?  @db.Uuid
+  kpiId        String?  @db.Uuid // version 2: a KPI score, calculated from the confirmed monthly numbers
   score        Int // 1 to 5
-  weightUsed   Decimal  @db.Decimal(5, 2) // copy of the criterion's weight at that time
+  weightUsed   Decimal  @db.Decimal(5, 2) // version 1: percent; version 2: points out of 100
   comment      String?
+  // Version 2, KPI rows only: the numbers the score was calculated from (kept for the history).
+  targetUsed         Decimal? @db.Decimal(14, 2) // the target of the months that are known
+  actualUsed         Decimal? @db.Decimal(14, 2) // the confirmed actual of those months
+  achievementPercent Decimal? @db.Decimal(5, 1) // after the cap (120%)
+  monthsUsed         Int? // how many months had a confirmed number
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  evaluation Evaluation          @relation(fields: [evaluationId], references: [id])
-  criterion  EvaluationCriterion @relation(fields: [criterionId], references: [id])
+  evaluation Evaluation           @relation(fields: [evaluationId], references: [id])
+  criterion  EvaluationCriterion? @relation(fields: [criterionId], references: [id])
+  kpi        Kpi?                 @relation(fields: [kpiId], references: [id])
 
   @@unique([evaluationId, criterionId])
+  @@unique([evaluationId, kpiId])
 }
 
 model EvaluationReview {
@@ -524,6 +548,7 @@ model Kpi {
   parentKpi Kpi?       @relation("KpiCascade", fields: [parentKpiId], references: [id])
   childKpis Kpi[]      @relation("KpiCascade")
   months    KpiMonth[]
+  evaluationScores EvaluationScore[] // version 2: KPI scores in evaluations
 
   @@index([planId])
   @@index([parentKpiId])

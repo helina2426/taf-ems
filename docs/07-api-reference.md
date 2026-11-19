@@ -167,6 +167,7 @@ Changes to criteria are refused (409) while any period is OPEN.
 | Method | Path | Who | Body / notes |
 |---|---|---|---|
 | GET | `/evaluations` | All | `periodId`, `companyId`, `employeeId`, `status`, `type` — the person evaluated sees only PUBLISHED ones |
+| GET | `/evaluations/periods` | All | Version 2: the periods an evaluation can be made in — version 1 periods (`kind` VERSION_1) and, for every plan year that has started, the first half (`MID_YEAR`) and the year (`ANNUAL`) |
 | GET | `/evaluations/:id` | All | Scores, missing criteria, self-assessment and review history (for evaluators and the Holding) |
 | POST | `/evaluations` | M (employees), H\* (Managers) | `employeeId`, `periodId` — one per person per period |
 | PUT | `/evaluations/:id/scores` | Evaluator | `scores: [{ criterionId, score (1–5), comment? }]` |
@@ -178,6 +179,16 @@ Changes to criteria are refused (409) while any period is OPEN.
 | POST | `/evaluations/:id/acknowledge` | The person evaluated | Optional `comment`; once, only when PUBLISHED |
 
 **Overall score** = Σ (score ÷ 5 × weight), rounded to 2 decimals. Example: 4, 5, 3, 4 with weights 30, 25, 20, 25 → **81%**.
+
+
+**Version 2 (Module 16): plan-based evaluations.** When `periodId` is a plan year's first half (mid-year review) or year (annual evaluation):
+
+- `POST /evaluations`: the person needs an **ACTIVE plan** (a Manager: their company's plan) → otherwise 409. An annual evaluation needs at least `minMonthsForRating` (6) full months in the year since the hire date (the 6-month rule) → otherwise 409. A quarter or a month → 409. `resultsShare` is copied from the plan year: 70 (employee) or 80 (Manager).
+- **KPI scores are calculated by the system** from the confirmed monthly numbers of the period's months (same formulas as the traffic lights): achievement % → score 1–5 (110+ → 5 · 100–109 → 4 · 85–99 → 3 · 70–84 → 2 · below 70 → 1) → points = score ÷ 5 × KPI weight. `PUT /scores` only accepts behaviours; their points = score ÷ 5 × (weight % × behaviour part).
+- The response has `kind` (MID_YEAR / ANNUAL), `kpiScores` (`targetUsed`, `actualUsed`, `achievementPercent`, `score`, `points`, `monthsUsed`), `behaviours` (with `weightPoints`), `resultsScore`, `behaviourScore`, `overallScore` (out of 100), `rating` (EXCEEDS ≥ 90 · SUCCESSFULLY_MEETS 75–89 · PARTIALLY_MEETS 55–74 · DOES_NOT_MEET < 55) and `safetyCapApplied`.
+- While DRAFT or RETURNED, the KPI scores are calculated again on every read. `POST /submit` needs at least one confirmed number for every KPI, then **saves** the KPI scores with the numbers they came from.
+- The safety rule (plan year `safetyCapEnabled`): Safety behaviour = 1 → rating at most PARTIALLY_MEETS.
+- Approve, return, publish and acknowledge work exactly as in version 1.
 
 ### Reports — `/reports`
 All accept `?periodId=` (default: the most recent open period).

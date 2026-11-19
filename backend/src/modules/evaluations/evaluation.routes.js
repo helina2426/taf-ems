@@ -27,6 +27,8 @@ const evaluator = authorize('MANAGER', 'HOLDING');
 
 // Reading (who sees what is checked in the service).
 router.get('/', validate(listEvaluationsQuerySchema, 'query'), controller.list);
+// Version 2: version 1 periods + each plan year's first half (mid-year) and year (annual).
+router.get('/periods', controller.periods);
 router.get('/:id', withId, controller.getById);
 
 // Writing.

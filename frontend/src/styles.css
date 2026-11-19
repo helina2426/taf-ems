@@ -1458,3 +1458,38 @@ input[type='range'] {
     text-align: left;
   }
 }
+
+/* ---------- Evaluations v2 (Module 16) ---------- */
+
+.rating-big {
+  margin: 6px 0 10px;
+}
+
+.rating-big .badge {
+  font-size: 1rem;
+  padding: 6px 12px;
+}
+
+.kpi-results tfoot td {
+  border-top: 2px solid var(--color-border);
+}
+
+/* The columns of the detail page may shrink, so a wide table scrolls inside its box on a phone. */
+.detail-main,
+.detail-side {
+  min-width: 0;
+}
+
+.kpi-results td.num,
+.kpi-results th.num {
+  white-space: nowrap;
+}
+
+.kpi-panel .panel-head {
+  flex-wrap: wrap;
+}
+
+.score-panel .facts {
+  text-align: left;
+  margin-top: 10px;
+}

@@ -17,13 +17,21 @@
 //     before submitting, and feedback is required.
 //   • Each score keeps a copy of the weight used, so later weight changes never alter old results.
 //   • Visibility: the person evaluated sees their evaluation only once it is PUBLISHED.
+//
+// Version 2 (Module 16): in a plan-year period (the first half = mid-year review, the year =
+// annual evaluation) the evaluation is plan-based — see evaluation.v2.js:
+//   • the person needs an ACTIVE plan (a Manager: their company's plan);
+//   • annual evaluation: at least minMonthsForRating (6) full months in the year (the 6-month rule);
+//   • KPI scores are calculated from the confirmed numbers; the evaluator scores the behaviours;
+//   • results (70 or 80 points) + behaviours (30 or 20) = overall score → rating (+ the safety rule).
 
 import prisma from '../../config/prisma.js';
 import { AppError } from '../../shared/AppError.js';
 import { recordAudit } from '../../shared/auditLog.js';
 import { buildPagination, toSkipTake } from '../../shared/validation.js';
 import * as repository from './evaluation.repository.js';
-import { calculateOverallScore, findMissingCriteria } from './evaluation.scoring.js';
+import { behaviourWeightPoints, calculateOverallScore, findMissingCriteria, monthsInYear } from './evaluation.scoring.js';
+import { buildV2, evaluationKind, findMonths, findPlan, toPeriodOption } from './evaluation.v2.js';
 import { MIN_FEEDBACK_LENGTH } from './evaluation.validation.js';
 
 const EDITABLE = ['DRAFT', 'RETURNED'];
@@ -80,19 +88,30 @@ function readScope(user, myEmployeeId) {
 // ---------- Response ----------
 
 export async function toResponse(evaluation, user, { withDetails = false } = {}) {
-  const scores = evaluation.scores.map((s) => ({
-    criterionId: s.criterionId,
-    criterion: s.criterion.name,
-    weightUsed: Number(s.weightUsed),
-    score: s.score,
-    comment: s.comment,
-  }));
+  // Behaviour (criterion) scores. Version 2 KPI scores are given separately (kpiScores).
+  const scores = evaluation.scores
+    .filter((s) => s.criterionId)
+    .map((s) => ({
+      criterionId: s.criterionId,
+      criterion: s.criterion.name,
+      weightUsed: Number(s.weightUsed),
+      score: s.score,
+      comment: s.comment,
+    }));
+  const kind = evaluationKind(evaluation.period);
 
   const response = {
     id: evaluation.id,
     type: evaluation.type,
     status: evaluation.status,
-    period: { id: evaluation.period.id, name: evaluation.period.name, status: evaluation.period.status },
+    period: { id: evaluation.period.id, name: evaluation.period.name, status: evaluation.period.status, type: evaluation.period.type },
+    // Version 2: MID_YEAR or ANNUAL (null = a version 1 evaluation), and the plan-based results.
+    kind,
+    resultsShare: evaluation.resultsShare,
+    resultsScore: evaluation.resultsScore === null ? null : Number(evaluation.resultsScore),
+    behaviourScore: evaluation.behaviourScore === null ? null : Number(evaluation.behaviourScore),
+    rating: evaluation.rating,
+    safetyCapApplied: evaluation.safetyCapApplied,
     employee: {
       id: evaluation.employee.id,
       employeeNumber: evaluation.employee.employeeNumber,
@@ -117,6 +136,18 @@ export async function toResponse(evaluation, user, { withDetails = false } = {})
   if (!withDetails) return response;
 
   response.scores = scores;
+
+  // Version 2: the KPI scores, the behaviours with their points, and the totals (calculated
+  // again now while the evaluation can still change, so newly confirmed numbers count).
+  if (kind) {
+    const v2 = await buildV2(evaluation);
+    response.planYear = v2.planYear;
+    response.behaviourPart = v2.behaviourPart;
+    response.planMissing = v2.planMissing;
+    response.kpiScores = v2.kpiScores;
+    response.behaviours = v2.behaviours;
+    Object.assign(response, v2.totals);
+  }
 
   // For the people who write or check the evaluation: what is still missing, and the
   // person's own submitted self-assessment for this period (if any).
@@ -187,7 +218,44 @@ export async function getEvaluation(id, user) {
   return toResponse(evaluation, user, { withDetails: true });
 }
 
+// The periods an evaluation can be made in (version 1 periods, and each plan year's first half and year).
+export async function listEvaluationPeriods() {
+  const periods = await repository.findEvaluationPeriods();
+  return { items: periods.map(toPeriodOption) };
+}
+
 // ---------- Writing ----------
+
+// Version 2: the checks before a plan-based evaluation is started. Returns the results share (70 or 80).
+async function checkPlanBased(period, employee, type, tx) {
+  const kind = evaluationKind(period);
+  if (!kind) {
+    throw AppError.conflict('In a plan year, evaluations are made for the first half (mid-year review) or for the whole year (annual evaluation).');
+  }
+  const cycle = period.cycle;
+  if (cycle.status !== 'ACTIVE') throw AppError.conflict(`The plan year ${cycle.name} is ${cycle.status}.`);
+
+  const plan = await findPlan({ cycleId: cycle.id, type, employeeId: employee.id, companyId: employee.companyId }, tx);
+  if (!plan || plan.status !== 'ACTIVE') {
+    throw AppError.conflict(
+      type === 'MANAGER'
+        ? `The company plan of ${cycle.name} is not active yet, so the Manager cannot be evaluated on it.`
+        : `${employee.firstName} ${employee.lastName} has no active plan in ${cycle.name}. Activate the plan first: the evaluation is based on it.`,
+    );
+  }
+
+  // The 6-month rule: an annual rating needs enough months in the year.
+  if (kind === 'ANNUAL') {
+    const months = await findMonths(period, tx);
+    const worked = monthsInYear(months, employee.hireDate);
+    if (worked < cycle.minMonthsForRating) {
+      throw AppError.conflict(
+        `${employee.firstName} worked ${worked} full month(s) of ${cycle.name}; an annual rating needs at least ${cycle.minMonthsForRating}. Write a mid-year review instead, or wait for next year.`,
+      );
+    }
+  }
+  return type === 'MANAGER' ? cycle.managerResultsShare : cycle.employeeResultsShare;
+}
 
 export async function createEvaluation({ employeeId, periodId }, user) {
   const evaluation = await prisma.$transaction(async (tx) => {
@@ -202,11 +270,14 @@ export async function createEvaluation({ employeeId, periodId }, user) {
       throw AppError.conflict(`An employee who is ${employee.employmentStatus} cannot be evaluated.`);
     }
 
-    const period = await repository.findPeriodById(periodId, tx);
+    const period = await repository.findEvaluationPeriod(periodId, tx);
     if (!period) throw AppError.notFound('Evaluation period not found.');
     if (period.status !== 'OPEN') {
       throw AppError.conflict(`Evaluations can only be started in an open period. "${period.name}" is ${period.status}.`);
     }
+
+    // Version 2: a plan-based evaluation (mid-year review or annual evaluation).
+    const resultsShare = period.cycleId ? await checkPlanBased(period, employee, type, tx) : null;
 
     if (await repository.findByEmployeeAndPeriod(employeeId, periodId, tx)) {
       throw AppError.conflict('This person already has an evaluation for this period.');
@@ -214,7 +285,7 @@ export async function createEvaluation({ employeeId, periodId }, user) {
 
     const created = await repository.create(
       // companyId is copied: if the person moves company later, this evaluation stays with this one.
-      { employeeId, periodId, companyId: employee.companyId, evaluatorId: user.id, type, status: 'DRAFT' },
+      { employeeId, periodId, companyId: employee.companyId, evaluatorId: user.id, type, status: 'DRAFT', resultsShare },
       tx,
     );
 
@@ -240,18 +311,27 @@ export async function saveScores(id, { scores }, user) {
       .map((s) => ({ field: 'scores', message: `Criterion ${s.criterionId} is not an active ${current.type.toLowerCase()} criterion.` }));
     if (problems.length > 0) throw AppError.badRequest('Some fields are missing or invalid.', problems);
 
+    // Version 1 keeps the weight in %; version 2 keeps it in points (e.g. Safety 20% of 30 = 6 points).
+    const planBased = Boolean(evaluationKind(current.period));
+    const weightOf = (criterion) => (planBased ? behaviourWeightPoints(criterion.weight, 100 - current.resultsShare) : criterion.weight);
     for (const s of scores) {
       await repository.upsertScore(
-        { evaluationId: id, criterionId: s.criterionId, score: s.score, comment: s.comment, weightUsed: activeById.get(s.criterionId).weight },
+        { evaluationId: id, criterionId: s.criterionId, score: s.score, comment: s.comment, weightUsed: weightOf(activeById.get(s.criterionId)) },
         tx,
       );
     }
 
-    // Recalculate: the overall score is known only when every active criterion has a score.
+    // Recalculate: the overall score is known only when everything has a score.
     const refreshed = await repository.findById(id, tx);
-    const currentScores = refreshed.scores.filter((s) => activeById.has(s.criterionId));
-    const complete = findMissingCriteria(active, currentScores).length === 0;
-    const updated = await repository.update(id, { overallScore: complete ? calculateOverallScore(currentScores) : null }, tx);
+    let totals;
+    if (planBased) {
+      totals = (await buildV2(refreshed, { live: true }, tx)).totals;
+    } else {
+      const currentScores = refreshed.scores.filter((s) => activeById.has(s.criterionId));
+      const complete = findMissingCriteria(active, currentScores).length === 0;
+      totals = { overallScore: complete ? calculateOverallScore(currentScores) : null };
+    }
+    const updated = await repository.update(id, totals, tx);
 
     await recordAudit(
       {
@@ -302,7 +382,38 @@ export async function submitEvaluation(id, user) {
     if ((refreshed.feedback ?? '').trim().length < MIN_FEEDBACK_LENGTH) {
       problems.push({ field: 'feedback', message: `Write at least ${MIN_FEEDBACK_LENGTH} characters of feedback before submitting.` });
     }
+
+    // Version 2: every KPI needs at least one confirmed number in the period.
+    const planBased = Boolean(evaluationKind(current.period));
+    let v2 = null;
+    if (planBased) {
+      v2 = await buildV2(refreshed, { live: true }, tx);
+      if (v2.planMissing) problems.push({ field: 'kpis', message: 'The plan is not active any more, so the KPI scores cannot be calculated.' });
+      const noNumbers = v2.kpiScores.filter((k) => k.score === null).map((k) => k.name);
+      if (noNumbers.length > 0) {
+        problems.push({ field: 'kpis', message: `No confirmed monthly numbers yet for: ${noNumbers.join(', ')}. Confirm them first.` });
+      }
+    }
     if (problems.length > 0) throw AppError.badRequest('The evaluation is not complete.', problems);
+
+    let scoreFields = { overallScore: calculateOverallScore(refreshed.scores) };
+    if (planBased) {
+      // Freeze the KPI scores with the numbers they came from.
+      await repository.replaceKpiScores(
+        id,
+        v2.kpiScores.map((k) => ({
+          kpiId: k.kpiId,
+          score: k.score,
+          weightUsed: k.weight,
+          targetUsed: k.targetUsed,
+          actualUsed: k.actualUsed,
+          achievementPercent: k.achievementPercent,
+          monthsUsed: k.monthsUsed,
+        })),
+        tx,
+      );
+      scoreFields = v2.totals;
+    }
 
     const submitted = await repository.update(
       id,
@@ -310,7 +421,7 @@ export async function submitEvaluation(id, user) {
         status: 'SUBMITTED',
         submittedAt: new Date(),
         evaluatorId: user.id, // the person who submits is the evaluator of record
-        overallScore: calculateOverallScore(refreshed.scores),
+        ...scoreFields,
       },
       tx,
     );
@@ -321,7 +432,7 @@ export async function submitEvaluation(id, user) {
         action: 'EVALUATION_SUBMITTED',
         entityType: 'Evaluation',
         entityId: id,
-        details: { from: current.status, overallScore: Number(submitted.overallScore) },
+        details: { from: current.status, overallScore: Number(submitted.overallScore), ...(submitted.rating && { rating: submitted.rating }) },
       },
       tx,
     );

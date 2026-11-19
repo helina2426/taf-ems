@@ -24641,6 +24641,1753 @@
           }
         }
       ]
+    },
+    {
+      "name": "Evaluations v2 - mid-year and annual (v2)",
+      "description": "Version 2, Module 16: plan-based evaluations. KPI scores come from the confirmed monthly numbers, the evaluator scores the behaviours, the total gives the UN rating. Uses the demo plans of 2019 EFY, so it needs the demo data (npm run test:api always starts from it). It loads the standard behaviours at the start and puts the old criteria back at the end.",
+      "item": [
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - remember the current criteria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('oldCriteriaIds', JSON.stringify(pm.response.json().data.items.map((c) => c.id)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?isActive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - close the 2026 period (behaviours can only change while it is closed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{annualPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{annualPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - use the standard behaviours",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria/use-standard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria",
+                "use-standard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Evaluation periods - mid-year and annual of 2019 EFY",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().data.items;",
+                  "const mid = items.find((p) => p.kind === 'MID_YEAR');",
+                  "const annual = items.find((p) => p.kind === 'ANNUAL');",
+                  "pm.test('A mid-year review and an annual evaluation, both open', () => { pm.expect(mid.status).to.eql('OPEN'); pm.expect(annual.status).to.eql('OPEN'); });",
+                  "pm.test('Version 1 periods are still listed', () => pm.expect(items.some((p) => p.kind === 'VERSION_1')).to.eql(true));",
+                  "pm.environment.set('midYearId', mid.id);",
+                  "pm.environment.set('annualYearId', annual.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha (Selam)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - find Dawit and Hanna",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().data.items;",
+                  "pm.environment.set('dawitId', items.find((e) => e.firstName === 'Dawit').id);",
+                  "pm.environment.set('hannaId', items.find((e) => e.firstName === 'Hanna').id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees?pageSize=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - find Dawit's plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().data.items.find((x) => x.status === 'ACTIVE');",
+                  "pm.environment.set('dPlanId', p.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans?level=INDIVIDUAL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans"
+              ],
+              "query": [
+                {
+                  "key": "level",
+                  "value": "INDIVIDUAL"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - the periods of the plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('q1Id', pm.response.json().data.progress.periods.find((p) => p.type === 'QUARTER' && p.sequence === 1).id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{dPlanId}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{dPlanId}}",
+                "progress"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - evaluation in a quarter (expect 409: only mid-year or annual)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{dawitId}}\",\n  \"periodId\": \"{{q1Id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - Hanna has no plan (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Says the plan is missing', () => pm.expect(pm.response.json().error.message).to.include('no active plan'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{hannaId}}\",\n  \"periodId\": \"{{midYearId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - start Dawit's mid-year review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.environment.set('v2EvalId', e.id);",
+                  "pm.test('Mid-year, 70 points for results, 30 for behaviours', () => { pm.expect(e.kind).to.eql('MID_YEAR'); pm.expect(e.resultsShare).to.eql(70); pm.expect(e.behaviourPart).to.eql(30); });",
+                  "pm.test('3 KPI scores calculated from the confirmed numbers', () => { pm.expect(e.kpiScores).to.have.length(3); e.kpiScores.forEach((k) => pm.expect(k.monthsUsed).to.be.at.least(4)); });",
+                  "const by = (name) => e.kpiScores.find((k) => k.name === name);",
+                  "pm.test('Deliveries ~101% → 4 · on time 100% → 4 · 1 safety incident → 1', () => { pm.expect(by('Fuel deliveries completed').score).to.eql(4); pm.expect(by('On-time deliveries').score).to.eql(4); pm.expect(by('Safety incidents').score).to.eql(1); });",
+                  "pm.test('Results: 24 + 16 + 4 = 44 of 70 points', () => pm.expect(e.resultsScore).to.eql(44));",
+                  "pm.test('No total yet: the behaviours are not scored', () => { pm.expect(e.overallScore).to.eql(null); pm.expect(e.rating).to.eql(null); });",
+                  "pm.test('6 behaviours; Safety is worth 6 points (20% of 30)', () => { pm.expect(e.behaviours).to.have.length(6); pm.expect(e.behaviours.find((b) => b.isSafety).weightPoints).to.eql(6); });",
+                  "const ids = Object.fromEntries(e.behaviours.map((b) => [b.name, b.criterionId]));",
+                  "pm.environment.set('behaviourScores', JSON.stringify([['Safety', 4], ['Integrity', 4], ['Teamwork', 3], ['Customer focus', 4], ['Accountability', 5], ['Initiative', 3]].map(([n, score]) => ({ criterionId: ids[n], score }))));",
+                  "pm.environment.set('dKpiId', e.kpiScores[0].kpiId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{dawitId}}\",\n  \"periodId\": \"{{midYearId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - start it again (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{dawitId}}\",\n  \"periodId\": \"{{midYearId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - try to score a KPI by hand (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scores\": [\n    {\n      \"criterionId\": \"{{dKpiId}}\",\n      \"score\": 5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}",
+                "scores"
+              ]
+            },
+            "description": "KPI scores are calculated by the system; only behaviours are scored by the evaluator."
+          }
+        },
+        {
+          "name": "Manager - score the 6 behaviours",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.test('Behaviours: 4.8 + 4.8 + 2.7 + 3.6 + 4.5 + 2.7 = 23.1 of 30', () => pm.expect(e.behaviourScore).to.eql(23.1));",
+                  "pm.test('Overall 44 + 23.1 = 67.1 → Partially meets', () => { pm.expect(e.overallScore).to.eql(67.1); pm.expect(e.rating).to.eql('PARTIALLY_MEETS'); });",
+                  "pm.test('The safety rule is off in this plan year', () => pm.expect(e.safetyCapApplied).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"scores\": {{behaviourScores}} }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}/scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}",
+                "scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - submit without feedback (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - write the feedback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feedback\": \"Deliveries are on target. The safety incident in the first quarter must not happen again.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - submit the mid-year review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.test('SUBMITTED, 67.1, Partially meets', () => { pm.expect(e.status).to.eql('SUBMITTED'); pm.expect(e.overallScore).to.eql(67.1); pm.expect(e.rating).to.eql('PARTIALLY_MEETS'); });",
+                  "pm.test('The KPI scores are saved with their numbers', () => { pm.expect(e.kpiScores).to.have.length(3); e.kpiScores.forEach((k) => { pm.expect(k.actualUsed).to.not.eql(null); pm.expect(k.monthsUsed).to.be.at.least(4); }); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}",
+                "submit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Beta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.beta@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager Beta - read Dawit's review (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}"
+              ]
+            },
+            "description": "Company wall."
+          }
+        },
+        {
+          "name": "Manager Beta - evaluate Dawit (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{dawitId}}\",\n  \"periodId\": \"{{midYearId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee Alpha (Dawit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - read it before it is published (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - approve",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}",
+                "approve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - publish",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}",
+                "publish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Audit log - the rating is in the submission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Rating PARTIALLY_MEETS recorded', () => pm.expect(pm.response.json().data.items[0].details.rating).to.eql('PARTIALLY_MEETS'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs?action=EVALUATION_SUBMITTED&entityId={{v2EvalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "EVALUATION_SUBMITTED"
+                },
+                {
+                  "key": "entityId",
+                  "value": "{{v2EvalId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - the 6-month rule: Dawit \"hired\" in Tir (5 full months)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hireDate\": \"2027-01-20\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{dawitId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{dawitId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - list shows the rating",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Mid-year, Partially meets, 44 results points', () => { const e = pm.response.json().data.items.find((x) => x.id === pm.environment.get('v2EvalId')); pm.expect(e.kind).to.eql('MID_YEAR'); pm.expect(e.rating).to.eql('PARTIALLY_MEETS'); pm.expect(e.resultsScore).to.eql(44); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations?periodId={{midYearId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ],
+              "query": [
+                {
+                  "key": "periodId",
+                  "value": "{{midYearId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - start Selam's mid-year review (a Manager: company plan, 80 points)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.test('Manager evaluation, 80 + 20', () => { pm.expect(e.type).to.eql('MANAGER'); pm.expect(e.resultsShare).to.eql(80); pm.expect(e.behaviourPart).to.eql(20); });",
+                  "pm.test('The 5 KPIs of Alpha\\'s company plan', () => pm.expect(e.kpiScores).to.have.length(5));",
+                  "pm.test('8 Manager behaviours; Safety worth 3 points (15% of 20)', () => { pm.expect(e.behaviours).to.have.length(8); pm.expect(e.behaviours.find((b) => b.isSafety).weightPoints).to.eql(3); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{alphaManagerEmployeeId}}\",\n  \"periodId\": \"{{midYearId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha (Selam)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - Dawit's annual evaluation with only 5 months (expect 409: 6-month rule)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Explains the 6-month rule', () => pm.expect(pm.response.json().error.message).to.include('at least 6'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{dawitId}}\",\n  \"periodId\": \"{{annualYearId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clean up - Dawit's real hire date back",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hireDate\": \"2024-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/employees/{{dawitId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "{{dawitId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha (Selam)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - start Dawit's annual evaluation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Annual, over the 12 months', () => { const e = pm.response.json().data.evaluation; pm.expect(e.kind).to.eql('ANNUAL'); pm.expect(e.kpiScores[0].monthsTotal).to.eql(12); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"{{dawitId}}\",\n  \"periodId\": \"{{annualYearId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee Alpha (Dawit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - reads his published mid-year review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const e = pm.response.json().data.evaluation;",
+                  "pm.test('His rating and how it was calculated', () => { pm.expect(e.rating).to.eql('PARTIALLY_MEETS'); pm.expect(e.resultsScore).to.eql(44); pm.expect(e.behaviourScore).to.eql(23.1); pm.expect(e.kpiScores).to.have.length(3); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - acknowledge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"I will follow the safety checklist every day.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations/{{v2EvalId}}/acknowledge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluations",
+                "{{v2EvalId}}",
+                "acknowledge"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clean up - switch the standard behaviours off and the old criteria back on",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const base = pm.environment.get('baseUrl');",
+                  "const token = pm.environment.get('token');",
+                  "const active = pm.response.json().data.items.map((c) => c.id);",
+                  "const old = JSON.parse(pm.environment.get('oldCriteriaIds'));",
+                  "const send = (id, isActive) => new Promise((resolve) => pm.sendRequest({",
+                  "  url: base + '/evaluation-criteria/' + id + '/status', method: 'PATCH',",
+                  "  header: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ isActive }) },",
+                  "}, (err, res) => resolve(err ? 0 : res.code)));",
+                  "(async () => {",
+                  "  const codes = [];",
+                  "  for (const id of active) codes.push(await send(id, false));",
+                  "  for (const id of old) codes.push(await send(id, true));",
+                  "  pm.test('Every switch worked', () => pm.expect(codes.every((c) => c === 200)).to.eql(true));",
+                  "})();"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-criteria?isActive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-criteria"
+              ],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clean up - reopen the 2026 period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OPEN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluation-periods/{{annualPeriodId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluation-periods",
+                "{{annualPeriodId}}",
+                "status"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

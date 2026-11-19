@@ -1,16 +1,29 @@
 // The frame around every page after login: the top bar, the menu on the left,
 // and the page itself in the middle (<Outlet /> = "the current page goes here").
 
-import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/useAuth.js';
-import { NAVIGATION, ROLE_LABELS } from './navigation.js';
+import { useApi } from '../hooks/useApi.js';
+import { visibleMenu } from '../utils/checkIns.js';
+import { FEATURES_CHANGED, NAVIGATION, ROLE_LABELS } from './navigation.js';
 
 export function AppLayout() {
   const { user, logout, setCalendar } = useAuth();
   const [savingCalendar, setSavingCalendar] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false); // for small screens
-  const items = NAVIGATION[user.role] ?? [];
+  // Module 14: is the "Check-ins" menu item shown? Asked again on every page change, and at once
+  // when the Head changes the switch on the Settings page (FEATURES_CHANGED).
+  const { pathname } = useLocation();
+  const checkInStatus = useApi('/check-ins/status');
+  const reloadStatus = checkInStatus.reload;
+  useEffect(() => reloadStatus(), [pathname, reloadStatus]);
+  useEffect(() => {
+    window.addEventListener(FEATURES_CHANGED, reloadStatus);
+    return () => window.removeEventListener(FEATURES_CHANGED, reloadStatus);
+  }, [reloadStatus]);
+  const features = { checkIns: checkInStatus.data?.status.enabled };
+  const items = visibleMenu(NAVIGATION[user.role] ?? [], features);
   const name = user.firstName ? `${user.firstName} ${user.lastName}` : user.email;
 
   return (

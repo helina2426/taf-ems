@@ -8,6 +8,7 @@ import { Alert, ErrorAlert, Field, PageHeader, Spinner } from '../../components/
 import { useApi } from '../../hooks/useApi.js';
 import { useSubmit } from '../../hooks/useSubmit.js';
 import { CALENDAR_LABEL } from '../../utils/planYears.js';
+import { FEATURES_CHANGED } from '../../layout/navigation.js';
 
 export function SettingsPage() {
   const { user } = useAuth();
@@ -54,6 +55,43 @@ export function SettingsPage() {
           </select>
         </Field>
       </div>
+
+      <CheckInSwitch enabled={settings.weeklyCheckInsEnabled} canEdit={canEdit} onSaved={reload} />
+    </div>
+  );
+}
+
+// Module 14: weekly check-ins on / off. Its own "Saved." message, separate from the calendar box.
+function CheckInSwitch({ enabled, canEdit, onSaved }) {
+  const { run, busy, error } = useSubmit();
+  const [saved, setSaved] = useState(false);
+  return (
+    <div className="panel">
+      <h3>Weekly check-ins</h3>
+      <p className="muted small">
+        Each week, employees write 3 short lines (what they did, what comes next, what is blocking them) and their Manager can reply. There is
+        no score: it helps everyone remember the year at evaluation time.
+      </p>
+      <p className="muted small">Switching it off hides the pages and stops new notes and replies. Old notes are kept and can still be read.</p>
+      <Alert type="success">{saved && (enabled ? 'Saved: weekly check-ins are on.' : 'Saved: weekly check-ins are off.')}</Alert>
+      <ErrorAlert error={error} />
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          checked={enabled}
+          disabled={!canEdit || busy}
+          onChange={(e) => {
+            setSaved(false);
+            run(() => api.patch('/settings', { weeklyCheckInsEnabled: e.target.checked }), () => {
+              setSaved(true);
+              onSaved();
+              window.dispatchEvent(new Event(FEATURES_CHANGED)); // the menu shows / hides "Check-ins" at once
+            });
+          }}
+        />
+        <span>Weekly check-ins are switched on</span>
+      </label>
+      {!canEdit && <p className="field-hint">Only the primary Holding user can change this.</p>}
     </div>
   );
 }

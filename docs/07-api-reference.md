@@ -189,8 +189,8 @@ All accept `?periodId=` (default: the most recent open period).
 ### Settings — `/settings` (version 2)
 | Method | Path | Who | Body / notes |
 |---|---|---|---|
-| GET | `/settings` | H | `holdingName`, `cycleCalendar` |
-| PATCH | `/settings` | H (primary only) | `cycleCalendar`: ETHIOPIAN or GREGORIAN — the calendar of NEW plan years |
+| GET | `/settings` | H | `holdingName`, `cycleCalendar`, `weeklyCheckInsEnabled` |
+| PATCH | `/settings` | H (primary only) | `cycleCalendar`: ETHIOPIAN or GREGORIAN — the calendar of NEW plan years · `weeklyCheckInsEnabled`: true / false (Module 14) |
 
 ### Plan years — `/plan-years` (version 2)
 A plan year ("2019 EFY" = Hamle 1, 2018 → Sene 30, 2019, or "2026 (GC)") has 19 periods: 1 year, 2 halves, 4 quarters, 12 months (Pagume is joined to Nehase).
@@ -246,6 +246,23 @@ When the person entering may also confirm, the number is confirmed at once. A ch
 | PUT | `/plans/:id/reviews/:periodId` | The owner (employee / Manager) or the reviewer (Manager / Holding) | `comment`. A month or a quarter that has started. No score |
 
 Also since Module 13: a month cannot be **closed** while numbers wait for confirmation, a plan with actual numbers cannot be **deleted**, and `GET /plans` returns `waitingForConfirmation` for each plan.
+
+### Weekly check-ins — `/check-ins` (version 2, Module 14)
+Each week an employee writes 3 short answers (`done`, `next`, `blockers`) and their Manager can reply. No score.
+A week starts on **Monday** and is named by that date (`weekStart`, YYYY-MM-DD, Addis Ababa time).
+
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| GET | `/check-ins/status` | Everyone | `enabled`, `today`, `thisWeek`, `lastWeek` |
+| GET | `/check-ins/week?weekStart=&companyId=` | M (own company), H (all, or one company) | Every employee of the company for that week (default: this week) with their note or `null`, and `counts` (`employees`, `written`, `replied`). E → 403. Another company → 403 |
+| GET | `/check-ins?employeeId=&page=&pageSize=` | E (own only), M (own company), H | One employee's notes, newest first. A Manager gets 404 for another company's employee |
+| PUT | `/check-ins/mine/:weekStart` | E | `done`, `next` (required), `blockers` (optional). Creates or changes the note. Only this week or last week (409), only a Monday (400), not after the Manager replied (409) |
+| DELETE | `/check-ins/mine/:weekStart` | E | Same rules: only before the Manager replies |
+| PUT | `/check-ins/:id/reply` | M (own company) | `reply`. Can be changed later. Another company's note → 404. Holding → 403 (read only) |
+
+When the Head switches check-ins **off** (`PATCH /settings`), writing, deleting and replying give 409; reading still works.
+A note keeps the company the employee was in when they wrote it, so it stays with that company if the employee moves.
+Audit log actions: `CHECK_IN_CREATED`, `CHECK_IN_UPDATED`, `CHECK_IN_DELETED`, `CHECK_IN_REPLIED`, `CHECK_IN_REPLY_UPDATED`.
 
 ### KPIs — `/kpis` (version 2)
 Only the writer of the plan, only while the plan is DRAFT or RETURNED.

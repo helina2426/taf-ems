@@ -9,6 +9,7 @@ import env from '../src/config/env.js';
 import prisma from '../src/config/prisma.js';
 import { buildPlanYear } from '../src/shared/planYear.js';
 import { splitYearTarget } from '../src/modules/plans/plan.rules.js';
+import { addDays, mondayOf } from '../src/modules/check-ins/checkIn.rules.js';
 import { randomUUID } from 'node:crypto';
 
 // One shared password for every sample account (development only).
@@ -275,6 +276,30 @@ async function main() {
     await addActuals(D.deliveries, [104, 98, 110, 95, 102, 99], selam, dawit, 60);
     await addActuals(D.onTime, [97, 94, 95, 98, 96, 97], selam, dawit);
     await addActuals(D.safety, [0, 0, 1, 0, 0, 0], selam, dawit);
+
+    // ---- 7d. Version 2: demo weekly check-ins (Module 14) --------------------
+    // Dawit wrote the last two weeks and Selam replied; Meron (Beta) wrote last week, no reply yet.
+    // Nobody has written THIS week yet, so you can try it.
+    const thisMonday = mondayOf(today);
+    const weeksAgo = (n) => new Date(addDays(thisMonday, -7 * n));
+    await tx.weeklyCheckIn.createMany({
+      data: [
+        {
+          employeeId: alphaEmployee1.employee.id, companyId: alpha.id, weekStart: weeksAgo(2),
+          done: 'Finished the generator maintenance plan. 24 deliveries.', next: 'Train the new driver on the safety checklist.', blockers: null,
+          reply: 'Good work on the plan. Please share it with the team.', repliedById: selam, repliedAt: now,
+        },
+        {
+          employeeId: alphaEmployee1.employee.id, companyId: alpha.id, weekStart: weeksAgo(1),
+          done: 'Trained the new driver. 22 deliveries.', next: 'Prepare the monthly delivery numbers.', blockers: 'One truck is waiting for a spare part.',
+          reply: 'I will call the supplier about the spare part.', repliedById: selam, repliedAt: now,
+        },
+        {
+          employeeId: betaEmployee1.employee.id, companyId: beta.id, weekStart: weeksAgo(1),
+          done: 'Planned next month\'s delivery routes.', next: 'Meet the two new customers.', blockers: null,
+        },
+      ],
+    });
 
     // ---- 8. A sample goal in each company --------------------------------
     await tx.performanceGoal.create({

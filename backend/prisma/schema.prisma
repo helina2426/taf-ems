@@ -132,6 +132,7 @@ model Holding {
   id            String       @id @default(uuid()) @db.Uuid
   name          String
   cycleCalendar CalendarType @default(ETHIOPIAN) // which calendar NEW plan years follow
+  weeklyCheckInsEnabled Boolean @default(true) // Module 14: the Head can switch weekly check-ins off
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -156,6 +157,7 @@ model Company {
   managerAssignments ManagerAssignment[]
   evaluations        Evaluation[]
   plans              Plan[]
+  checkIns           WeeklyCheckIn[]
 
   @@index([holdingId])
 }
@@ -194,6 +196,7 @@ model User {
   actualsEntered       KpiMonth[]           @relation("ActualEnteredBy")
   actualsConfirmed     KpiMonth[]           @relation("ActualConfirmedBy")
   progressReviews      ProgressReview[]
+  checkInReplies       WeeklyCheckIn[]      @relation("CheckInRepliedBy")
 }
 
 model Employee {
@@ -219,6 +222,7 @@ model Employee {
   selfAssessments SelfAssessment[]
   evaluations     Evaluation[]
   plans           Plan[]
+  checkIns        WeeklyCheckIn[]
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])
@@ -587,4 +591,34 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+// ----------------------------------------------------------------------------
+// WEEKLY CHECK-INS (version 2, Module 14)
+// ----------------------------------------------------------------------------
+
+// A short weekly note: what the employee did, what comes next, and what is blocking them.
+// The Manager can reply. There is no score: it is a memory aid for the evaluations.
+// companyId = the employee's company when the note was written, so if the employee moves
+// to another company later, the old notes stay with the old company (the company wall).
+model WeeklyCheckIn {
+  id          String    @id @default(uuid()) @db.Uuid
+  employeeId  String    @db.Uuid
+  companyId   String    @db.Uuid
+  weekStart   DateTime  @db.Date // the Monday of the week
+  done        String // what I did this week
+  next        String // what I will do next week
+  blockers    String? // what is stopping me (optional)
+  reply       String? // the Manager's reply
+  repliedById String?   @db.Uuid
+  repliedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  company   Company  @relation(fields: [companyId], references: [id])
+  repliedBy User?    @relation("CheckInRepliedBy", fields: [repliedById], references: [id])
+
+  @@unique([employeeId, weekStart])
+  @@index([companyId, weekStart])
 }

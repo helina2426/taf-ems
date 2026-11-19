@@ -2,6 +2,7 @@
 //
 //   • cycleCalendar: which calendar NEW plan years follow (ETHIOPIAN by default).
 //     Plan years that already exist keep the calendar they were created with.
+//   • weeklyCheckInsEnabled (Module 14): weekly check-ins on (the default) or off.
 //   • Every Holding user can read the settings; only the primary Holding user (the Head) can change them.
 
 import prisma from '../../config/prisma.js';

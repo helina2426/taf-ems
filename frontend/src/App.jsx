@@ -29,6 +29,8 @@ import { SettingsPage } from './pages/holding/SettingsPage.jsx';
 import { PlansPage } from './pages/plans/PlansPage.jsx';
 import { PlanDetailPage } from './pages/plans/PlanDetailPage.jsx';
 import { MyPlanPage } from './pages/plans/MyPlanPage.jsx';
+import { CheckInsPage } from './pages/check-ins/CheckInsPage.jsx';
+import { EmployeeCheckInsPage } from './pages/check-ins/EmployeeCheckInsPage.jsx';
 
 // Which page belongs to each menu address.
 const PAGES = {
@@ -48,6 +50,7 @@ const PAGES = {
   '/settings': SettingsPage,
   '/plans': PlansPage,
   '/my-plan': MyPlanPage,
+  '/check-ins': CheckInsPage,
 };
 
 // For each menu entry (except the dashboard), work out which roles have it in their menu,
@@ -95,6 +98,14 @@ export default function App() {
               element={
                 <RequireAuth roles={['HOLDING']}>
                   <PlanYearDetailPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/check-ins/employees/:employeeId"
+              element={
+                <RequireAuth roles={['HOLDING', 'MANAGER']}>
+                  <EmployeeCheckInsPage />
                 </RequireAuth>
               }
             />

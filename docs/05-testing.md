@@ -9,9 +9,9 @@ The results below are from real runs; re-run them before every demo or hand-over
 
 | Kind | What it checks | Tool | How to run | Size |
 |---|---|---|---|---|
-| **Unit tests (backend)** | Small pieces on their own: the score formula, validation rules, passwords, tokens | Node's built-in test runner (`node --test`) — nothing to install | `cd backend && npm run test:unit` | 81 tests |
-| **Unit tests (frontend)** | The display helpers and the rules that decide which buttons to show | `node --test` | `cd frontend && npm test` | 32 tests |
-| **API tests** | Every endpoint, every role, every business rule, security (401/403/409/429…) | Postman collection, run by Newman | `cd backend && npm run test:api` | 538 requests, 735 checks |
+| **Unit tests (backend)** | Small pieces on their own: the score formula, validation rules, passwords, tokens | Node's built-in test runner (`node --test`) — nothing to install | `cd backend && npm run test:unit` | 85 tests |
+| **Unit tests (frontend)** | The display helpers and the rules that decide which buttons to show | `node --test` | `cd frontend && npm test` | 36 tests |
+| **API tests** | Every endpoint, every role, every business rule, security (401/403/409/429…) | Postman collection, run by Newman | `cd backend && npm run test:api` | 583 requests, 804 checks |
 | **Manual tests (UI)** | The screens, for each role | A person, with the checklist in section 4 | — | 3 roles |
 
 **Why so many API tests and so few unit tests?** Most of our rules (the company wall, who may approve, one evaluation per person and period…) live in the services and depend on the database. The API tests check them exactly as a real user would hit them, including the database. Unit tests are used where a piece of logic can be checked alone.

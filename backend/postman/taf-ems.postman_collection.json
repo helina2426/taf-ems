@@ -21840,6 +21840,1814 @@
           }
         }
       ]
+    },
+    {
+      "name": "Weekly check-ins (v2)",
+      "description": "Version 2, Module 14: an employee writes a short weekly note (done, next, blockers), the Manager replies, the Holding reads. The Head can switch check-ins off. Uses the demo notes (Dawit and Meron). It leaves the data as it found it: Hanna deletes her test note at the end, and a second run only changes Yonas's reply text.",
+      "item": [
+        {
+          "name": "Login - Manager Alpha (Selam)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status - check-ins are on; this week and last week",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data.status;",
+                  "pm.test('Switched on (the default)', () => pm.expect(s.enabled).to.eql(true));",
+                  "pm.environment.set('thisWeek', s.thisWeek);",
+                  "pm.environment.set('lastWeek', s.lastWeek);",
+                  "pm.test('Weeks start on Monday', () => pm.expect(new Date(s.thisWeek + 'T00:00:00Z').getUTCDay()).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - last week of his team",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('Only Alpha employees (Dawit, Hanna), not Selam himself', () => { pm.expect(d.rows.map((r) => r.employee.firstName).sort()).to.eql(['Dawit', 'Hanna']); pm.expect(d.rows.every((r) => r.employee.company.id === pm.environment.get('alphaCompanyId'))).to.eql(true); });",
+                  "const dawit = d.rows.find((r) => r.employee.firstName === 'Dawit');",
+                  "pm.environment.set('dEmpId', dawit.employee.id);",
+                  "pm.test('Dawit wrote last week and Selam replied (demo data)', () => { pm.expect(dawit.checkIn.blockers).to.include('spare part'); pm.expect(dawit.checkIn.reply).to.be.a('string'); });",
+                  "pm.test('Counts: 2 employees, 1 written, 1 replied', () => pm.expect(d.counts).to.eql({ employees: 2, written: 1, replied: 1 }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/week?weekStart={{lastWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "week"
+              ],
+              "query": [
+                {
+                  "key": "weekStart",
+                  "value": "{{lastWeek}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - all notes of Dawit, newest first",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('At least 2 notes, newest first', () => { pm.expect(d.items.length).to.be.at.least(2); pm.expect(d.items[0].weekStart > d.items[1].weekStart).to.eql(true); });",
+                  "pm.test('Selam may reply', () => pm.expect(d.items[0].can.reply).to.eql(true));",
+                  "pm.environment.set('dCheckInId', d.items[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins?employeeId={{dEmpId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "{{dEmpId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - another company's week (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/week?companyId={{betaCompanyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "week"
+              ],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "{{betaCompanyId}}"
+                }
+              ]
+            },
+            "description": "Company wall."
+          }
+        },
+        {
+          "name": "Manager - a week that does not start on Monday (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/week?weekStart=2026-11-18",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "week"
+              ],
+              "query": [
+                {
+                  "key": "weekStart",
+                  "value": "2026-11-18"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Beta (Yonas)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.beta@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager Beta - read Dawit's notes (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins?employeeId={{dEmpId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "{{dEmpId}}"
+                }
+              ]
+            },
+            "description": "Company wall: another company's employee looks \"not found\"."
+          }
+        },
+        {
+          "name": "Manager Beta - reply to Dawit's note (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reply\": \"Not my team.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/{{dCheckInId}}/reply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "{{dCheckInId}}",
+                "reply"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager Beta - last week of his team",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const row = pm.response.json().data.rows.find((r) => r.checkIn);",
+                  "pm.test('Meron wrote last week (demo data)', () => pm.expect(row.employee.firstName).to.eql('Meron'));",
+                  "pm.environment.set('mCheckInId', row.checkIn.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/week?weekStart={{lastWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "week"
+              ],
+              "query": [
+                {
+                  "key": "weekStart",
+                  "value": "{{lastWeek}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager Beta - reply to Meron",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().data.checkIn;",
+                  "pm.test('Reply saved, by Yonas', () => { pm.expect(c.reply).to.include('Good plan'); pm.expect(c.repliedBy).to.eql('manager.beta@demo.local'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reply\": \"Good plan. Tell me how the meetings go.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/{{mCheckInId}}/reply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "{{mCheckInId}}",
+                "reply"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager Beta - an empty reply (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reply\": \" \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/{{mCheckInId}}/reply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "{{mCheckInId}}",
+                "reply"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager Beta - write a check-in himself (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"done\": \"abc\",\n  \"next\": \"def\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{thisWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{thisWeek}}"
+              ]
+            },
+            "description": "Only employees write check-ins."
+          }
+        },
+        {
+          "name": "Login - Employee 2 Alpha (Hanna)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee2.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - write this week's check-in",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().data.checkIn;",
+                  "pm.test('Saved for this week, no blockers, she can still change it', () => { pm.expect(c.weekStart).to.eql(pm.environment.get('thisWeek')); pm.expect(c.blockers).to.eql(null); pm.expect(c.can.edit).to.eql(true); });",
+                  "pm.environment.set('hCheckInId', c.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"done\": \"Closed the October accounts.\",\n  \"next\": \"Prepare the quarter report.\",\n  \"blockers\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{thisWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{thisWeek}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - change it (same note, not a second one)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().data.checkIn;",
+                  "pm.test('Same note, updated', () => { pm.expect(c.id).to.eql(pm.environment.get('hCheckInId')); pm.expect(c.blockers).to.include('invoices'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"done\": \"Closed the October accounts.\",\n  \"next\": \"Prepare the quarter report.\",\n  \"blockers\": \"Waiting for two invoices from Beta.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{thisWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{thisWeek}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - \"done\" is missing (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"next\": \"Prepare the quarter report.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{thisWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{thisWeek}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - a Tuesday in the URL (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"done\": \"abc\",\n  \"next\": \"def\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/2026-11-17",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "2026-11-17"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - a week that is too old (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"done\": \"abc\",\n  \"next\": \"def\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/2020-01-06",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "2020-01-06"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - her own notes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('Her note is there', () => pm.expect(d.items.map((c) => c.id)).to.include(pm.environment.get('hCheckInId')));",
+                  "pm.test('Only her notes', () => pm.expect(d.items.every((c) => c.employeeId === d.employee.id)).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - read Dawit's notes (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins?employeeId={{dEmpId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "{{dEmpId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - the week view (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/week",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "week"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - reply to a note (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reply\": \"Hello\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/{{dCheckInId}}/reply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "{{dCheckInId}}",
+                "reply"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha (Selam)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - this week: Hanna wrote, Dawit not yet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const hanna = d.rows.find((r) => r.employee.firstName === 'Hanna');",
+                  "pm.test('Hanna\\'s note is there', () => pm.expect(hanna.checkIn.id).to.eql(pm.environment.get('hCheckInId')));",
+                  "pm.test('Dawit has not written this week', () => pm.expect(d.rows.find((r) => r.employee.firstName === 'Dawit').checkIn).to.eql(null));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/week",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "week"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee Alpha (Dawit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - change last week's note after Selam replied (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"done\": \"abc\",\n  \"next\": \"def\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{lastWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{lastWeek}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dawit - delete it (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{lastWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{lastWeek}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - the week view of every company",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('Alpha and Beta employees', () => pm.expect(new Set(d.rows.map((r) => r.employee.company.name)).size).to.be.at.least(2));",
+                  "pm.test('Read only: no reply button', () => pm.expect(d.rows.filter((r) => r.checkIn).every((r) => !r.checkIn.can.reply)).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/week?weekStart={{lastWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "week"
+              ],
+              "query": [
+                {
+                  "key": "weekStart",
+                  "value": "{{lastWeek}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - list without an employee (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - reply (expect 403: only the Manager replies)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reply\": \"Hello\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/{{hCheckInId}}/reply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "{{hCheckInId}}",
+                "reply"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Audit log - Yonas's reply was recorded",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('A CHECK_IN_REPLIED for Meron\\'s note', () => pm.expect(pm.response.json().data.items.length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs?action=CHECK_IN_REPLIED&entityId={{mCheckInId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "CHECK_IN_REPLIED"
+                },
+                {
+                  "key": "entityId",
+                  "value": "{{mCheckInId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Audit log - Hanna's note was recorded",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('One CHECK_IN_CREATED', () => pm.expect(pm.response.json().data.items).to.have.length(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs?action=CHECK_IN_CREATED&entityId={{hCheckInId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "CHECK_IN_CREATED"
+                },
+                {
+                  "key": "entityId",
+                  "value": "{{hCheckInId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - switch weekly check-ins off",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Off', () => pm.expect(pm.response.json().data.settings.weeklyCheckInsEnabled).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weeklyCheckInsEnabled\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee 2 Alpha (Hanna)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee2.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - status says off",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Off', () => pm.expect(pm.response.json().data.status.enabled).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - write while off (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"done\": \"abc\",\n  \"next\": \"def\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{thisWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{thisWeek}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - old notes can still be read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('Still there, but no edit button', () => { pm.expect(d.enabled).to.eql(false); pm.expect(d.items.find((c) => c.id === pm.environment.get('hCheckInId')).can.edit).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - switch weekly check-ins on again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('On', () => pm.expect(pm.response.json().data.settings.weeklyCheckInsEnabled).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weeklyCheckInsEnabled\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Audit log - the switch was recorded",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('SETTINGS_UPDATED with weeklyCheckInsEnabled', () => pm.expect(pm.response.json().data.items.some((a) => a.details && a.details.weeklyCheckInsEnabled)).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs?action=SETTINGS_UPDATED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "SETTINGS_UPDATED"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee 2 Alpha (Hanna)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee2.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clean up - Hanna deletes her test note",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{thisWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{thisWeek}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clean up - delete it again (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/check-ins/mine/{{thisWeek}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "check-ins",
+                "mine",
+                "{{thisWeek}}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

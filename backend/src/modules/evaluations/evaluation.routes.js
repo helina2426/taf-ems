@@ -6,6 +6,8 @@ import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
 import { idParamSchema } from '../../shared/validation.js';
 import * as controller from './evaluation.controller.js';
+import * as appeals from '../appeals/appeal.controller.js';
+import { createAppealSchema } from '../appeals/appeal.validation.js';
 import {
   acknowledgeSchema,
   approveSchema,
@@ -45,5 +47,8 @@ router.post('/:id/publish', reviewer, withId, controller.publish);
 
 // The person evaluated confirms they have read it (any role: Employees and Managers are both evaluated).
 router.post('/:id/acknowledge', withId, validate(acknowledgeSchema), controller.acknowledge);
+
+// Version 2 (Module 18): the person evaluated appeals a low rating (checked in the service).
+router.post('/:id/appeal', withId, validate(createAppealSchema), appeals.create);
 
 export default router;

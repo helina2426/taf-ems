@@ -31,6 +31,7 @@ import { recordAudit } from '../../shared/auditLog.js';
 import { buildPagination, toSkipTake } from '../../shared/validation.js';
 import * as repository from './evaluation.repository.js';
 import { behaviourWeightPoints, calculateOverallScore, findMissingCriteria, monthsInYear } from './evaluation.scoring.js';
+import { appealInfo, toAppealResponse } from '../appeals/appeal.service.js';
 import { buildV2, evaluationKind, findMonths, findPlan, toPeriodOption } from './evaluation.v2.js';
 import { MIN_FEEDBACK_LENGTH } from './evaluation.validation.js';
 
@@ -112,6 +113,8 @@ export async function toResponse(evaluation, user, { withDetails = false } = {})
     behaviourScore: evaluation.behaviourScore === null ? null : Number(evaluation.behaviourScore),
     rating: evaluation.rating,
     safetyCapApplied: evaluation.safetyCapApplied,
+    // Version 2 (Module 18): the appeal, if any (its status only, in lists).
+    appealStatus: evaluation.appeal ? (evaluation.appeal.outcome ?? evaluation.appeal.status) : null,
     employee: {
       id: evaluation.employee.id,
       employeeNumber: evaluation.employee.employeeNumber,
@@ -147,6 +150,12 @@ export async function toResponse(evaluation, user, { withDetails = false } = {})
     response.kpiScores = v2.kpiScores;
     response.behaviours = v2.behaviours;
     Object.assign(response, v2.totals);
+    // Module 18: the appeal, and whether the person can still appeal (and until when).
+    // While editable, totals are live; after publication they are the saved ones (a changed appeal updates them).
+    const info = appealInfo(evaluation, evaluation.period.cycle?.appealDays ?? 14, user);
+    response.appeal = toAppealResponse(evaluation.appeal, evaluation, user);
+    response.canAppeal = info.canAppeal;
+    response.appealDeadline = info.appealDeadline;
   }
 
   // For the people who write or check the evaluation: what is still missing, and the

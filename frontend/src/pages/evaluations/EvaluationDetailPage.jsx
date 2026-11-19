@@ -17,6 +17,7 @@ import { useApi } from '../../hooks/useApi.js';
 import { useSubmit } from '../../hooks/useSubmit.js';
 import { KIND_LABEL, RATING_LABEL, RATING_TONE, STATUS_LABEL, STATUS_TONE, canWrite, isApprover, previewScore, previewV2 } from '../../utils/evaluations.js';
 import { DIRECTION, formatNumber } from '../../utils/plans.js';
+import { AppealSection } from './Appeal.jsx';
 import { formatDate, formatDateTime, fullName, percent } from '../../utils/format.js';
 
 export function EvaluationDetailPage() {
@@ -59,6 +60,8 @@ export function EvaluationDetailPage() {
           {writable ? <FeedbackEditor ev={ev} onSaved={reload} /> : <FeedbackView ev={ev} />}
           {writable && <SubmitBox ev={ev} onSaved={reload} />}
           {isPerson && ev.status === 'PUBLISHED' && <Acknowledge ev={ev} onSaved={reload} />}
+          {/* Module 18: appeal a low rating, and the decision. */}
+          {ev.kind && <AppealSection ev={ev} onSaved={reload} />}
         </div>
 
         <aside className="detail-side">
@@ -465,6 +468,11 @@ function RatingPanel({ ev }) {
         <dd>{ev.behaviourScore === null ? '—' : `${formatNumber(ev.behaviourScore)} / ${ev.behaviourPart}`}</dd>
       </dl>
       {ev.safetyCapApplied && <Alert type="info">The safety rule lowered the rating: Safety was scored 1.</Alert>}
+      {ev.appeal?.outcome === 'RATING_CHANGED' && (
+        <Alert type="info">
+          Changed after an appeal. Before: {RATING_LABEL[ev.appeal.originalRating]} ({ev.appeal.originalScore}).
+        </Alert>
+      )}
       <p className="muted small">90+ Exceeds · 75–89 Successfully meets · 55–74 Partially meets · below 55 Does not meet</p>
     </div>
   );

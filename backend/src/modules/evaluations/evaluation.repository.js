@@ -4,7 +4,8 @@
 import prisma from '../../config/prisma.js';
 
 export const evaluationInclude = {
-  period: true,
+  period: { include: { cycle: { select: { appealDays: true } } } },
+  appeal: { include: { decidedBy: { select: { email: true } } } }, // version 2 (Module 18)
   company: true,
   employee: { include: { user: { select: { id: true, role: true } } } },
   evaluator: { select: { email: true } },

@@ -298,6 +298,17 @@ Months that are over (or closed) keep their target; the new year target is share
 
 `GET /plans/:id` also gives each KPI's `pendingChange` and `can.changeTargets` / `can.changeDirectly`. Audit log: `KPI_CHANGE_REQUESTED`, `KPI_CHANGE_APPROVED`, `KPI_CHANGE_REJECTED`, `KPI_TARGET_CHANGED`.
 
+### Appeals — `/appeals` (version 2, Module 18)
+The person evaluated can appeal a **published** plan-based evaluation rated **Partially meets** or **Does not meet**, after acknowledging it, within the plan year's `appealDays` (14). One appeal per evaluation. **One** Holding approver who did **not** write and did **not** approve the evaluation decides; the decision is final.
+
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| POST | `/evaluations/:id/appeal` | The person evaluated | `reason` (≥ 20 characters). 409 if not appealable (rating, not acknowledged, too late, already appealed) |
+| GET | `/appeals?status=` | H (all), M (his company's employees, and his own), everyone (their own) | `items` (reason, `originalRating`, `originalScore`, decision, `can.decide`, `whyCannotDecide`, the evaluation) and `waiting` |
+| POST | `/appeals/:id/decide` | H\* who did not write or approve it | `outcome` RATING_KEPT or RATING_CHANGED; `newScore` (0–100, required for RATING_CHANGED and must give a different rating); `comment` (≥ 20 characters) |
+
+A changed rating replaces the evaluation's `rating` and `overallScore`; the original stays in the appeal. `GET /evaluations/:id` gives `appeal`, `canAppeal` and `appealDeadline`; lists give `appealStatus`. Audit log: `APPEAL_SUBMITTED`, `APPEAL_DECIDED`.
+
 ### KPIs — `/kpis` (version 2)
 Only the writer of the plan, only while the plan is DRAFT or RETURNED.
 

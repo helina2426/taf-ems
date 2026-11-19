@@ -73,6 +73,17 @@ enum ChangeRequestStatus {
   REJECTED
 }
 
+// Version 2 (Module 18): appeals against a low rating.
+enum AppealStatus {
+  SUBMITTED // waiting for a decision
+  DECIDED // final
+}
+
+enum AppealOutcome {
+  RATING_KEPT
+  RATING_CHANGED
+}
+
 // Version 2 (Module 16): the UN-style rating of a plan-based evaluation.
 enum EvaluationRating {
   EXCEEDS // 90 or more
@@ -214,6 +225,7 @@ model User {
   checkInReplies       WeeklyCheckIn[]      @relation("CheckInRepliedBy")
   changesRequested     KpiChangeRequest[]   @relation("ChangeRequestedBy")
   changesDecided       KpiChangeRequest[]   @relation("ChangeDecidedBy")
+  appealsDecided       EvaluationAppeal[]   @relation("AppealDecidedBy")
 }
 
 model Employee {
@@ -447,6 +459,7 @@ model Evaluation {
   publishedBy User?              @relation("PublishedBy", fields: [publishedById], references: [id])
   scores      EvaluationScore[]
   reviews     EvaluationReview[]
+  appeal      EvaluationAppeal? // version 2 (Module 18): at most one appeal
 
   @@unique([employeeId, periodId])
   @@index([companyId, status])
@@ -689,5 +702,35 @@ model KpiChangeRequest {
   decidedBy   User? @relation("ChangeDecidedBy", fields: [decidedById], references: [id])
 
   @@index([kpiId, status])
+  @@index([status])
+}
+
+// ----------------------------------------------------------------------------
+// APPEALS (version 2, Module 18)
+// ----------------------------------------------------------------------------
+
+// An appeal of the person evaluated against a "Partially meets" or "Does not meet" rating,
+// within appealDays (14) after they acknowledged the evaluation. One per evaluation.
+// Decided by ONE Holding approver who did not write or approve that evaluation. Final.
+// originalRating / originalScore keep the rating before the appeal, so the history is never lost.
+model EvaluationAppeal {
+  id              String            @id @default(uuid()) @db.Uuid
+  evaluationId    String            @unique @db.Uuid
+  reason          String
+  status          AppealStatus      @default(SUBMITTED)
+  originalRating  EvaluationRating
+  originalScore   Decimal           @db.Decimal(5, 2)
+  outcome         AppealOutcome?
+  newRating       EvaluationRating?
+  newScore        Decimal?          @db.Decimal(5, 2)
+  decisionComment String?
+  decidedById     String?           @db.Uuid
+  decidedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+  decidedBy  User?      @relation("AppealDecidedBy", fields: [decidedById], references: [id])
+
   @@index([status])
 }

@@ -78,3 +78,20 @@ export function previewV2(resultsScore, behaviours, scores, { safetyCapEnabled =
   if (capped) rating = 'PARTIALLY_MEETS';
   return { behaviourScore, overallScore, rating, safetyCapApplied: Boolean(capped) };
 }
+
+// ---------- Version 2 (Module 18): appeals ----------
+
+// The badge of an appeal (appealStatus = SUBMITTED, RATING_KEPT or RATING_CHANGED).
+export const APPEAL_LABEL = {
+  SUBMITTED: { label: 'Appeal waiting', tone: 'info' },
+  RATING_KEPT: { label: 'Appeal: rating kept', tone: 'neutral' },
+  RATING_CHANGED: { label: 'Appeal: rating changed', tone: 'good' },
+};
+
+// The rating a new score would give, for the decision form ("76 → Successfully meets").
+// Returns null when the score is missing, or when it gives the same rating as before.
+export function newRatingPreview(score, originalRating) {
+  if (score === '' || score === null || score === undefined || Number.isNaN(Number(score))) return null;
+  const rating = ratingFor(Number(score));
+  return rating === originalRating ? null : rating;
+}

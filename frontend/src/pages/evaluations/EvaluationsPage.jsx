@@ -15,7 +15,7 @@ import { Badge, EmptyState, ErrorAlert, Field, PageHeader, Spinner } from '../..
 import { useApi } from '../../hooks/useApi.js';
 import { useCompanyOptions } from '../../hooks/useCompanyOptions.js';
 import { useSubmit } from '../../hooks/useSubmit.js';
-import { EVALUATION_STATUSES, RATING_LABEL, RATING_TONE, STATUS_LABEL, STATUS_TONE, defaultEvaluationPeriodId, isApprover } from '../../utils/evaluations.js';
+import { APPEAL_LABEL, EVALUATION_STATUSES, RATING_LABEL, RATING_TONE, STATUS_LABEL, STATUS_TONE, defaultEvaluationPeriodId, isApprover } from '../../utils/evaluations.js';
 import { fieldError, formatDate, fullName, percent } from '../../utils/format.js';
 
 export function EvaluationsPage() {
@@ -125,7 +125,16 @@ export function EvaluationsPage() {
                   <td>
                     <Badge tone={STATUS_TONE[ev.status]}>{STATUS_LABEL[ev.status]}</Badge>
                   </td>
-                  {planBased && <td>{ev.rating ? <Badge tone={RATING_TONE[ev.rating]}>{RATING_LABEL[ev.rating]}</Badge> : <span className="muted">—</span>}</td>}
+                  {planBased && (
+                    <td>
+                      {ev.rating ? <Badge tone={RATING_TONE[ev.rating]}>{RATING_LABEL[ev.rating]}</Badge> : <span className="muted">—</span>}
+                      {ev.appealStatus && (
+                        <div>
+                          <Badge tone={APPEAL_LABEL[ev.appealStatus].tone}>{APPEAL_LABEL[ev.appealStatus].label}</Badge>
+                        </div>
+                      )}
+                    </td>
+                  )}
                   <td className="num strong">{planBased ? (ev.overallScore ?? '—') : percent(ev.overallScore)}</td>
                   <td className="small">{formatDate(ev.updatedAt)}</td>
                 </tr>

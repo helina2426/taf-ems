@@ -8,6 +8,8 @@ import { validate } from '../../middleware/validate.js';
 import { idParamSchema } from '../../shared/validation.js';
 import * as controller from './plan.controller.js';
 import * as progress from '../progress/progress.controller.js';
+import * as changes from '../change-requests/changeRequest.controller.js';
+import { createRequestSchema } from '../change-requests/changeRequest.validation.js';
 import { actualSchema, commentSchema, kpiMonthParamsSchema, planPeriodParamsSchema } from '../progress/progress.validation.js';
 import {
   acknowledgePlanSchema,
@@ -45,3 +47,5 @@ kpiRoutes.delete('/:id', withId, controller.deleteKpi);
 kpiRoutes.put('/:id/months', withId, validate(monthTargetsSchema), controller.setMonthTargets);
 kpiRoutes.put('/:id/months/:periodId/actual', validate(kpiMonthParamsSchema, 'params'), validate(actualSchema), progress.enterActual);
 kpiRoutes.post('/:id/months/:periodId/confirm', validate(kpiMonthParamsSchema, 'params'), progress.confirmActual);
+// Module 17: ask for (or, for the Head, make) a change of the year target of an ACTIVE plan.
+kpiRoutes.post('/:id/change-requests', withId, validate(createRequestSchema), changes.create);

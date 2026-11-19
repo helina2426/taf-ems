@@ -279,6 +279,25 @@ When the Head switches check-ins **off** (`PATCH /settings`), writing, deleting 
 A note keeps the company the employee was in when they wrote it, so it stays with that company if the employee moves.
 Audit log actions: `CHECK_IN_CREATED`, `CHECK_IN_UPDATED`, `CHECK_IN_DELETED`, `CHECK_IN_REPLIED`, `CHECK_IN_REPLY_UPDATED`.
 
+### Target changes — `/change-requests` (version 2, Module 17)
+Changing the year target of a KPI of an **ACTIVE** plan during the year, with a reason.
+
+| Plan | Who asks | Who decides |
+|---|---|---|
+| Employee plan | the company's Manager | the Head (or a Holding approver) |
+| Company plan, Holding plan | — | the Head changes it directly (saved as APPROVED at once) |
+
+Months that are over (or closed) keep their target; the new year target is shared by the current and future months (SUM: the rest is shared; AVERAGE: so the 12-month average is the new target; LAST: the remaining months get the new level). A "zero is best" KPI cannot change.
+
+| Method | Path | Who | Body / notes |
+|---|---|---|---|
+| POST | `/kpis/:id/change-requests` | M (employee KPIs of his company), H\* (any) | `yearTarget`, `reason` (≥ 10 characters). 409 if one is already waiting, 400 if the target is the same or lower than the months already over |
+| GET | `/change-requests?status=&planId=&kpiId=` | H (all), M (his company), E (his own plan) | `items` (old → new year target, `changedMonths`, reason, decision, `can.decide`) and `waiting` |
+| POST | `/change-requests/:id/approve` | H\* | Optional `comment`. Applies the new targets (calculated again at that moment) |
+| POST | `/change-requests/:id/reject` | H\* | `comment` (≥ 10 characters) |
+
+`GET /plans/:id` also gives each KPI's `pendingChange` and `can.changeTargets` / `can.changeDirectly`. Audit log: `KPI_CHANGE_REQUESTED`, `KPI_CHANGE_APPROVED`, `KPI_CHANGE_REJECTED`, `KPI_TARGET_CHANGED`.
+
 ### KPIs — `/kpis` (version 2)
 Only the writer of the plan, only while the plan is DRAFT or RETURNED.
 

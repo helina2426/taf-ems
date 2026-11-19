@@ -5,6 +5,9 @@
 //   Company plan:  Draft → Submit → (Head) Approve, or Return with a reason → fix → Submit again
 //   Holding plan:  Draft → (Head) Activate
 //   Employee plan: Draft → (Manager) Activate → (employee) Acknowledge
+//
+// Module 17: an ACTIVE plan's targets can still change during the year, with a reason
+// (the Manager asks for employee KPIs; the Head decides, or changes any target directly).
 
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -16,6 +19,7 @@ import { useSubmit } from '../../hooks/useSubmit.js';
 import { fieldError, formatDate } from '../../utils/format.js';
 import { shortPeriodName } from '../../utils/planYears.js';
 import { ProgressSection } from './ProgressSection.jsx';
+import { ChangeTargetDialog, TargetChangeHistory } from './TargetChanges.jsx';
 import {
   AGGREGATION,
   AGGREGATIONS,
@@ -135,10 +139,19 @@ export function PlanView({ plan, reload, backTo }) {
         </div>
       )}
 
-      <KpiTable plan={plan} onEdit={(kpi) => setDialog({ type: 'kpi', kpi })} onMonths={(kpi) => setDialog({ type: 'months', kpi })} onDelete={(kpi) => setDialog({ type: 'deleteKpi', kpi })} />
+      <KpiTable
+        plan={plan}
+        onEdit={(kpi) => setDialog({ type: 'kpi', kpi })}
+        onMonths={(kpi) => setDialog({ type: 'months', kpi })}
+        onDelete={(kpi) => setDialog({ type: 'deleteKpi', kpi })}
+        onChangeTarget={(kpi) => setDialog({ type: 'changeTarget', kpi })}
+      />
 
       {/* Module 13: the real numbers, month by month, once the plan is active. */}
-      {plan.status === 'ACTIVE' && <ProgressSection planId={plan.id} />}
+      {plan.status === 'ACTIVE' && <ProgressSection key={plan.updatedAt + plan.kpis.map((k) => k.yearTarget).join()} planId={plan.id} />}
+      {/* Module 17: the target changes of this plan. */}
+      {plan.status === 'ACTIVE' && <TargetChangeHistory planId={plan.id} version={plan.kpis.map((k) => `${k.yearTarget}${k.pendingChange?.id ?? ''}`).join()} />}
+      {dialog?.type === 'changeTarget' && <ChangeTargetDialog plan={plan} kpi={dialog.kpi} onClose={close} onDone={done} />}
 
       {dialog?.type === 'kpi' && <KpiForm plan={plan} kpi={dialog.kpi} onClose={close} onSaved={done} />}
       {dialog?.type === 'months' && <MonthsForm plan={plan} kpi={dialog.kpi} onClose={close} onSaved={done} />}
@@ -188,7 +201,7 @@ function Stat({ label, value, hint, ok }) {
   );
 }
 
-function KpiTable({ plan, onEdit, onMonths, onDelete }) {
+function KpiTable({ plan, onEdit, onMonths, onDelete, onChangeTarget }) {
   if (plan.kpis.length === 0) return <div className="empty-state">No KPIs yet.{plan.can.edit && ' Click "+ Add KPI" to add the first one.'}</div>;
   return (
     <div className="table-wrap">
@@ -223,12 +236,22 @@ function KpiTable({ plan, onEdit, onMonths, onDelete }) {
               <td className="num">
                 <span className="strong">{formatNumber(kpi.yearTarget)}</span> <span className="muted small">{kpi.unit}</span>
                 {kpi.baseline !== null && <div className="muted small">last year {formatNumber(kpi.baseline)}</div>}
+                {kpi.pendingChange && (
+                  <div>
+                    <Badge tone="info">→ {formatNumber(kpi.pendingChange.yearTarget)} waiting for the Head</Badge>
+                  </div>
+                )}
               </td>
               {plan.level !== 'HOLDING' && <td className="num strong">{kpi.weight ?? '—'}</td>}
               <td className="row-actions">
                 <button className="btn btn-ghost btn-small" onClick={() => onMonths(kpi)}>
                   Months
                 </button>
+                {plan.can.changeTargets && kpi.direction !== 'ZERO' && (
+                  <button className="btn btn-ghost btn-small" disabled={Boolean(kpi.pendingChange)} onClick={() => onChangeTarget(kpi)} title={kpi.pendingChange ? 'A change is already waiting for the Head' : ''}>
+                    Change target
+                  </button>
+                )}
                 {plan.can.edit && (
                   <>
                     <button className="btn btn-ghost btn-small" onClick={() => onEdit(kpi)}>

@@ -76,3 +76,12 @@ export function allowedActions(user, plan) {
     delete: open && ((writer && EDITABLE.includes(plan.status)) || (plan.status === 'ACTIVE' && user.role === 'HOLDING' && user.isPrimaryHoldingUser)),
   };
 }
+
+// Version 2 (Module 17): may this user change the targets of this ACTIVE plan during the year?
+//   Employee plan: the company's Manager may ASK (the Head decides); a Holding approver changes it directly.
+//   Company and Holding plans: only a Holding approver, directly.
+export function canChangeTargets(user, plan) {
+  if (plan.status !== 'ACTIVE' || plan.cycle.status !== 'ACTIVE') return false;
+  if (isApprover(user)) return true;
+  return plan.level === 'INDIVIDUAL' && user.role === 'MANAGER' && Boolean(user.companyId) && user.companyId === plan.companyId;
+}

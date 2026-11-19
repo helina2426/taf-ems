@@ -66,6 +66,13 @@ enum ReviewDecision {
   RETURNED
 }
 
+// Version 2 (Module 17): a request to change a KPI target during the year.
+enum ChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // Version 2 (Module 16): the UN-style rating of a plan-based evaluation.
 enum EvaluationRating {
   EXCEEDS // 90 or more
@@ -205,6 +212,8 @@ model User {
   actualsConfirmed     KpiMonth[]           @relation("ActualConfirmedBy")
   progressReviews      ProgressReview[]
   checkInReplies       WeeklyCheckIn[]      @relation("CheckInRepliedBy")
+  changesRequested     KpiChangeRequest[]   @relation("ChangeRequestedBy")
+  changesDecided       KpiChangeRequest[]   @relation("ChangeDecidedBy")
 }
 
 model Employee {
@@ -549,6 +558,7 @@ model Kpi {
   childKpis Kpi[]      @relation("KpiCascade")
   months    KpiMonth[]
   evaluationScores EvaluationScore[] // version 2: KPI scores in evaluations
+  changeRequests   KpiChangeRequest[] // version 2: target changes during the year
 
   @@index([planId])
   @@index([parentKpiId])
@@ -649,4 +659,35 @@ model WeeklyCheckIn {
 
   @@unique([employeeId, weekStart])
   @@index([companyId, weekStart])
+}
+
+// ----------------------------------------------------------------------------
+// TARGET CHANGES (version 2, Module 17)
+// ----------------------------------------------------------------------------
+
+// A request to change the year target of a KPI of an ACTIVE plan, with the reason.
+//   Employee KPI: the Manager asks, the Head (or a Holding approver) decides.
+//   Company / Holding KPI: the Head changes it directly (the request is saved as APPROVED, for the history).
+// Months that are over or closed keep their old target; only the current and future months change.
+// oldValues / newValues keep the year target and the 12 monthly targets before and after.
+model KpiChangeRequest {
+  id              String              @id @default(uuid()) @db.Uuid
+  kpiId           String              @db.Uuid
+  requestedById   String              @db.Uuid
+  reason          String
+  oldValues       Json // { yearTarget, months: [12 targets] }
+  newValues       Json // { yearTarget, months: [12 targets] }
+  status          ChangeRequestStatus @default(PENDING)
+  decidedById     String?             @db.Uuid
+  decidedAt       DateTime?
+  decisionComment String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  kpi         Kpi   @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  requestedBy User  @relation("ChangeRequestedBy", fields: [requestedById], references: [id])
+  decidedBy   User? @relation("ChangeDecidedBy", fields: [decidedById], references: [id])
+
+  @@index([kpiId, status])
+  @@index([status])
 }

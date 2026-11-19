@@ -13,6 +13,8 @@ const planSummaryInclude = {
 };
 
 const kpiInclude = {
+  // Version 2 (Module 17): a target change that waits for the Head.
+  changeRequests: { where: { status: 'PENDING' }, select: { id: true, newValues: true, reason: true } },
   parentKpi: { select: { id: true, name: true, unit: true, plan: { select: { level: true } } } },
   months: { include: { period: true }, orderBy: { period: { sequence: 'asc' } } },
   childKpis: {
@@ -179,6 +181,10 @@ export function toKpiResponse(kpi, { showLinked }) {
     yearTarget: num(kpi.yearTarget),
     weight: kpi.weight,
     sortOrder: kpi.sortOrder,
+    // Version 2 (Module 17): a target change waiting for the Head, if any.
+    pendingChange: kpi.changeRequests?.[0]
+      ? { id: kpi.changeRequests[0].id, yearTarget: kpi.changeRequests[0].newValues.yearTarget, reason: kpi.changeRequests[0].reason }
+      : null,
     parentKpi: kpi.parentKpi ? { id: kpi.parentKpi.id, name: kpi.parentKpi.name, unit: kpi.parentKpi.unit, level: kpi.parentKpi.plan.level } : null,
     months: kpi.months.map((m) => ({
       periodId: m.periodId,

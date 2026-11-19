@@ -27,6 +27,7 @@ import settingsRoutes from './modules/settings/settings.routes.js';
 import planYearRoutes from './modules/plan-years/planYear.routes.js';
 import { kpiRoutes, planRoutes } from './modules/plans/plan.routes.js';
 import checkInRoutes from './modules/check-ins/checkIn.routes.js';
+import changeRequestRoutes from './modules/change-requests/changeRequest.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -91,6 +92,7 @@ app.use('/api/plan-years', planYearRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/kpis', kpiRoutes);
 app.use('/api/check-ins', checkInRoutes);
+app.use('/api/change-requests', changeRequestRoutes);
 
 // Production: also serve the built React app (see SERVE_FRONTEND).
 if (env.serveFrontend) {

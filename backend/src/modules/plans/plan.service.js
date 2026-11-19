@@ -18,7 +18,7 @@ import { AppError } from '../../shared/AppError.js';
 import { recordAudit } from '../../shared/auditLog.js';
 import { addDays } from '../../shared/ethiopianCalendar.js';
 import { toDateOnly } from '../../shared/validation.js';
-import { EDITABLE, allowedActions, assertCanView, canSeeLinked, isApprover, isWriter } from './plan.access.js';
+import { EDITABLE, allowedActions, assertCanView, canChangeTargets, canSeeLinked, isApprover, isWriter } from './plan.access.js';
 import { PERSPECTIVES, cascadeWarning, checkPlanReady, resultsShareFor } from './plan.rules.js';
 import * as repository from './plan.repository.js';
 import { countActualsInPlan, waitingPerPlan } from '../progress/progress.service.js';
@@ -72,7 +72,9 @@ export function toPlanDetail(plan, user) {
     acknowledgeComment: plan.acknowledgeComment,
     createdBy: plan.createdBy?.email ?? null,
     approvedBy: plan.approvedBy?.email ?? null,
-    can: { ...actions, delete: actions.delete && !hasLinked },
+    // changeTargets (Module 17): ask for / make a target change during the year.
+    // changeDirectly: the change is made at once (the Head) instead of waiting for a decision.
+    can: { ...actions, delete: actions.delete && !hasLinked, changeTargets: canChangeTargets(user, plan), changeDirectly: canChangeTargets(user, plan) && isApprover(user) },
     kpis,
   };
 }

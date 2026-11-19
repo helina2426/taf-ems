@@ -29,6 +29,7 @@ import { SettingsPage } from './pages/holding/SettingsPage.jsx';
 import { PlansPage } from './pages/plans/PlansPage.jsx';
 import { PlanDetailPage } from './pages/plans/PlanDetailPage.jsx';
 import { MyPlanPage } from './pages/plans/MyPlanPage.jsx';
+import { TargetChangesPage } from './pages/plans/TargetChanges.jsx';
 import { CheckInsPage } from './pages/check-ins/CheckInsPage.jsx';
 import { EmployeeCheckInsPage } from './pages/check-ins/EmployeeCheckInsPage.jsx';
 
@@ -51,6 +52,7 @@ const PAGES = {
   '/plans': PlansPage,
   '/my-plan': MyPlanPage,
   '/check-ins': CheckInsPage,
+  '/target-changes': TargetChangesPage,
 };
 
 // For each menu entry (except the dashboard), work out which roles have it in their menu,

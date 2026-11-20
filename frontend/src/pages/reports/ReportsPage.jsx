@@ -1,4 +1,4 @@
-// Reports (SRS FR-09).
+// Reports (SRS FR-09). Version 2 (Module 19) adds the "Plan year" tab (PlanYearReport.jsx).
 //   • Holding: completion per company, company comparison (with the consolidated Holding view),
 //     Manager performance.
 //   • Manager: completion of their own company.
@@ -11,8 +11,10 @@ import { Badge, EmptyState, ErrorAlert, PageHeader, Spinner, StatCard } from '..
 import { useApi } from '../../hooks/useApi.js';
 import { defaultPeriodId, usePeriods } from '../../hooks/usePeriods.js';
 import { fullName, percent } from '../../utils/format.js';
+import { PlanYearReport } from './PlanYearReport.jsx';
 
 const TABS = [
+  { key: 'planYear', label: 'Plan year', roles: ['HOLDING', 'MANAGER'] }, // version 2 (Module 19)
   { key: 'completion', label: 'Completion', roles: ['HOLDING', 'MANAGER'] },
   { key: 'companies', label: 'Compare companies', roles: ['HOLDING'] },
   { key: 'managers', label: 'Manager performance', roles: ['HOLDING'] },
@@ -32,10 +34,7 @@ export function ReportsPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Reports" subtitle="Only approved or published results count in scores and completion." />
-      <div className="toolbar">
-        <PeriodSelect periods={periods} value={periodId} onChange={setPeriodId} />
-      </div>
+      <PageHeader title="Reports" subtitle={tab === 'planYear' ? 'The plan year: KPI progress, people on track or at risk, and ratings.' : 'Version 1 periods. Only approved or published results count in scores and completion.'} />
       {tabs.length > 1 && (
         <div className="tabs" role="tablist">
           {tabs.map((t) => (
@@ -43,6 +42,12 @@ export function ReportsPage() {
               {t.label}
             </button>
           ))}
+        </div>
+      )}
+      {tab === 'planYear' && <PlanYearReport />}
+      {tab !== 'planYear' && (
+        <div className="toolbar">
+          <PeriodSelect periods={periods} value={periodId} onChange={setPeriodId} />
         </div>
       )}
       {periodId && tab === 'completion' && <CompletionReport periodId={periodId} />}

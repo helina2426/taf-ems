@@ -29402,6 +29402,605 @@
           }
         }
       ]
+    },
+    {
+      "name": "Reports v2 (plan year)",
+      "description": "Version 2, Module 19: the plan-year report (KPI lights per company and quarter, on track / at risk / off track, employees without a plan, numbers waiting, rating distribution) and the v2 part of the dashboards. Uses the data of the earlier v2 folders, so run the whole collection (npm run test:api).",
+      "item": [
+        {
+          "name": "Login - Head (Holding)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"head@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - plan-year report, every company",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('The active plan year and its 4 quarters', () => { pm.expect(d.planYear.status).to.eql('ACTIVE'); pm.expect(d.quarters.length).to.eql(4); pm.expect(d.planYears.length).to.be.at.least(1); });",
+                  "const alpha = d.companies.find((c) => c.id === pm.environment.get('alphaCompanyId'));",
+                  "pm.test('Alpha: the company plan with lights per KPI, year to date and per quarter', () => { pm.expect(alpha.companyPlan.status).to.eql('ACTIVE'); const k = alpha.companyPlan.kpis[0]; pm.expect(k.quarters.length).to.eql(4); pm.expect(['GREEN', 'YELLOW', 'RED', null]).to.include(k.yearToDate.light); });",
+                  "pm.test('Beta is in the report too', () => pm.expect(d.companies.some((c) => c.id === pm.environment.get('betaCompanyId'))).to.eql(true));",
+                  "pm.test('Dawit is off track (a red KPI: the safety incident)', () => pm.expect(d.lists.offTrack.some((p) => p.employee.id === pm.environment.get('dawitId'))).to.eql(true));",
+                  "pm.test('Hanna has no plan', () => pm.expect(d.withoutPlan.some((p) => p.employee.id === pm.environment.get('hannaId'))).to.eql(true));",
+                  "pm.test('Ratings: Dawit\\'s mid-year review (Successfully meets after the appeal) counts', () => { pm.expect(d.ratings.midYear.SUCCESSFULLY_MEETS).to.be.at.least(1); const r = d.ratings.all; pm.expect(r.EXCEEDS + r.SUCCESSFULLY_MEETS + r.PARTIALLY_MEETS + r.DOES_NOT_MEET).to.eql(r.total); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/plan-year",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "plan-year"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - only Beta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('One company, no Alpha people', () => { pm.expect(d.companies.length).to.eql(1); pm.expect(d.employees.some((p) => p.company.id === pm.environment.get('alphaCompanyId'))).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/plan-year?companyId={{betaCompanyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "plan-year"
+              ],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "{{betaCompanyId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - a company that does not exist (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/plan-year?companyId=00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "plan-year"
+              ],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - a plan year that does not exist (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/plan-year?planYearId=00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "plan-year"
+              ],
+              "query": [
+                {
+                  "key": "planYearId",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - a bad id (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/plan-year?planYearId=abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "plan-year"
+              ],
+              "query": [
+                {
+                  "key": "planYearId",
+                  "value": "abc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Head - dashboard: the v2 part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const v = pm.response.json().data.v2;",
+                  "pm.test('Plan year, waiting counts and ratings', () => { pm.expect(v.planYear.status).to.eql('ACTIVE'); ['companyPlansWaiting', 'targetChangesWaiting', 'appealsWaiting', 'companyNumbersWaiting'].forEach((k) => pm.expect(v[k]).to.be.a('number')); pm.expect(v.ratings.total).to.be.at.least(1); });",
+                  "pm.test('People: off track counted', () => pm.expect(v.people.offTrack).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "dashboard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Manager Alpha (Selam)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - plan-year report: his company only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('Only Alpha', () => { pm.expect(d.companies.map((c) => c.id)).to.eql([pm.environment.get('alphaCompanyId')]); pm.expect(d.employees.every((p) => p.company.id === pm.environment.get('alphaCompanyId'))).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/plan-year",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "plan-year"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - Beta's report by changing the URL (expect 403: company wall)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/plan-year?companyId={{betaCompanyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "plan-year"
+              ],
+              "query": [
+                {
+                  "key": "companyId",
+                  "value": "{{betaCompanyId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manager - dashboard: team plans, watch list, check-ins",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const v = pm.response.json().data.v2;",
+                  "pm.test('Dawit is on the watch list', () => pm.expect(v.watchList.some((p) => p.employee.id === pm.environment.get('dawitId'))).to.eql(true));",
+                  "pm.test('The company plan has lights', () => pm.expect(v.companyPlan.status).to.eql('ACTIVE'));",
+                  "pm.test('Counts are numbers', () => { pm.expect(v.waitingForConfirmation).to.be.a('number'); pm.expect(v.targetChangesWaiting).to.be.a('number'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "dashboard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee Alpha (Dawit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee1.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - plan-year report (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/plan-year",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "plan-year"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee - dashboard: my plan and my latest rating",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('My plan with a light per KPI', () => { pm.expect(d.v2.myPlan.kpis.length).to.be.at.least(1); pm.expect(d.v2.myPlan.lights.worst).to.eql('RED'); });",
+                  "pm.test('Latest result: mid-year review, Successfully meets', () => { pm.expect(d.latestEvaluation.kind).to.eql('MID_YEAR'); pm.expect(d.latestEvaluation.rating).to.eql('SUCCESSFULLY_MEETS'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "dashboard"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Employee 2 Alpha (Hanna)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "// Save the token so the next requests use it.",
+                  "const body = pm.response.json();",
+                  "if (body.success) {",
+                  "  pm.environment.set('token', body.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee2.alpha@demo.local\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Hanna - dashboard: no plan yet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('myPlan is empty', () => pm.expect(pm.response.json().data.v2.myPlan).to.eql(null));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "dashboard"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

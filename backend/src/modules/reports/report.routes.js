@@ -5,7 +5,7 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
 import * as controller from './report.controller.js';
-import { employeeIdParamSchema, periodQuerySchema } from './report.validation.js';
+import { employeeIdParamSchema, periodQuerySchema, planYearQuerySchema } from './report.validation.js';
 
 const router = Router();
 
@@ -18,6 +18,10 @@ router.get('/dashboard', withPeriod, controller.dashboard);
 
 // Holding (all companies) and Managers (own company only).
 router.get('/completion', authorize('HOLDING', 'MANAGER'), withPeriod, controller.completion);
+
+// Version 2 (Module 19): the plan year — KPI lights, on track / at risk, ratings.
+// Holding: every company (or ?companyId=); Managers: their own company only (checked in the service).
+router.get('/plan-year', authorize('HOLDING', 'MANAGER'), validate(planYearQuerySchema, 'query'), controller.planYear);
 
 // Holding only.
 router.get('/companies', authorize('HOLDING'), withPeriod, controller.companies);

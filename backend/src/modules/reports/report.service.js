@@ -13,7 +13,9 @@
 
 import { AppError } from '../../shared/AppError.js';
 import { toDateOnly } from '../../shared/validation.js';
+import { evaluationKind } from '../evaluations/evaluation.v2.js';
 import * as repository from './report.repository.js';
+import { employeeV2, holdingV2, managerV2 } from './report.v2.service.js';
 
 const STATUSES = ['DRAFT', 'SUBMITTED', 'RETURNED', 'APPROVED', 'PUBLISHED'];
 
@@ -306,6 +308,7 @@ async function holdingDashboard(period, user) {
     canApproveEvaluations: user.isPrimaryHoldingUser || user.canApproveEvaluations,
     period: periodSummary(period),
     organization: { activeCompanies, employees, managers },
+    v2: await holdingV2(), // Module 19: the plan year
   };
   if (!period) return dashboard;
 
@@ -341,6 +344,7 @@ async function managerDashboard(period, user) {
     period: periodSummary(period),
     team: { size: teamSize },
     teamGoals: { byStatus: goalsByStatus, averageProgress: round(goalAvg._avg.progressPercent, 0) },
+    v2: await managerV2(user), // Module 19: the plan year
   };
   if (!period) return dashboard;
 
@@ -360,7 +364,7 @@ async function managerDashboard(period, user) {
   // The Manager's own result: only once it is published (same rule as everywhere else).
   dashboard.myEvaluation =
     mine && mine.status === 'PUBLISHED'
-      ? { id: mine.id, overallScore: round(mine.overallScore), acknowledged: Boolean(mine.acknowledgedAt) }
+      ? { id: mine.id, overallScore: round(mine.overallScore), rating: mine.rating, acknowledged: Boolean(mine.acknowledgedAt) }
       : null;
   return dashboard;
 }
@@ -369,11 +373,12 @@ async function employeeDashboard(period, user) {
   const employeeId = user.employeeId;
   if (!employeeId) throw AppError.forbidden('You do not have an employee profile.');
 
-  const [[goalRows, goalAvg], latest, publishedCount, selfAssessment] = await Promise.all([
+  const [[goalRows, goalAvg], latest, publishedCount, selfAssessment, v2] = await Promise.all([
     repository.goalStats({ employeeId }),
     repository.findLatestPublishedEvaluation(employeeId),
     repository.countPublished(employeeId),
     period ? repository.findSelfAssessment(employeeId, period.id) : null,
+    employeeV2(user),
   ]);
   const goalsByStatus = { NOT_STARTED: 0, IN_PROGRESS: 0, COMPLETED: 0, CANCELLED: 0 };
   for (const row of goalRows) goalsByStatus[row.status] = row._count._all;
@@ -389,9 +394,13 @@ async function employeeDashboard(period, user) {
           id: latest.id,
           period: periodSummary(latest.period),
           overallScore: round(latest.overallScore),
+          // Version 2: the rating and the kind (mid-year / annual); null for a version 1 evaluation.
+          rating: latest.rating,
+          kind: evaluationKind(latest.period),
           acknowledged: Boolean(latest.acknowledgedAt),
         }
       : null,
+    v2, // Module 19: my plan this year
   };
 }
 

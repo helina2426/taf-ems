@@ -200,6 +200,14 @@ All accept `?periodId=` (default: the most recent open period).
 | GET | `/reports/companies` | H | Company ranking by average score + whole-Holding numbers |
 | GET | `/reports/managers` | H | Per Manager: submitted, on time, returned, team average, own result |
 | GET | `/reports/employees/:employeeId` | H; M (own employees); the person (published only) | Evaluation history, summary, goals |
+| GET | `/reports/plan-year?planYearId=&companyId=` | H (all companies, or one); M (own company only — another `companyId` → 403); E → 403 | **Version 2 (Module 19).** Default plan year: the ACTIVE one that contains today. `companies` (company plan KPIs year to date and per quarter with `light`, employee counts, numbers waiting, `ratings`), `employees` (plan status and light counts), `lists` (`onTrack` = every KPI green, `atRisk` = worst yellow, `offTrack` = at least one red, `noNumbersYet`), `withoutPlan`, `waitingForConfirmation`, `ratings` (`all`, `midYear`, `annual`, `employees`, `managers`: counts and percent), `planYears` |
+
+Version 2 dashboards (Module 19): `GET /reports/dashboard` also returns `v2` (null when there is no plan year):
+- **Holding:** `companyPlansWaiting`, `targetChangesWaiting`, `appealsWaiting`, `companyNumbersWaiting`, `people` (active plans, without plan, on track, at risk, off track), `companies` (plan status and lights), `ratings`.
+- **Manager:** `companyPlan` (lights), `people`, `planDrafts`, `watchList` (off track, then at risk), `waitingForConfirmation`, `targetChangesWaiting`, `checkIns` (this week; null when switched off), `ratings`, `myLatestEvaluation`.
+- **Employee:** `myPlan` (only when ACTIVE: each KPI's achievement and light, year to date). `latestEvaluation` now has `rating` and `kind` (MID_YEAR / ANNUAL).
+
+Only CONFIRMED monthly numbers count; the lights use the same rule as the progress page (green ≥ 100%, yellow 85–99%, red < 85%).
 
 ### Settings — `/settings` (version 2)
 | Method | Path | Who | Body / notes |
